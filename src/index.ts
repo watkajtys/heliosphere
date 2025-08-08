@@ -1,3 +1,5 @@
+export { fetchSdoImage } from './sdo';
+
 /**
  * Welcome to Cloudflare Workers!
  *
