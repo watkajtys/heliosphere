@@ -1,4 +1,6 @@
 import { Container, getContainer } from '@cloudflare/containers';
+import { createCompositeImage } from './compositor.js';
+import Vips from '@carlsverre/wasm-vips';
 
 export class CronContainer extends Container {
 	sleepAfter = '5m';
@@ -77,7 +79,30 @@ export default {
 			const [sdoBuffer, sohoBuffer] = await Promise.all([fetchSdoImage(now, apiKey), fetchSohoImage(now, apiKey)]);
 
 			if (sdoBuffer && sohoBuffer) {
-				return new Response('Successfully fetched 2 image buffers.', { status: 200 });
+				const vips = await Vips();
+				const sdoImage = vips.Image.newFromBuffer(sdoBuffer);
+				const sohoImage = vips.Image.newFromBuffer(sohoBuffer);
+
+				const sdoJpegBuffer = sdoImage.writeToBuffer('.jpg');
+				const sohoJpegBuffer = sohoImage.writeToBuffer('.jpg');
+
+				const sdoBase64 = arrayBufferToBase64(sdoJpegBuffer);
+				const sohoBase64 = arrayBufferToBase64(sohoJpegBuffer);
+
+				const html = `
+					<html>
+						<body>
+							<h1>SDO Image</h1>
+							<img src="data:image/jpeg;base64,${sdoBase64}" />
+							<h1>SOHO Image</h1>
+							<img src="data:image/jpeg;base64,${sohoBase64}" />
+						</body>
+					</html>
+				`;
+
+				return new Response(html, {
+					headers: { 'Content-Type': 'text/html' },
+				});
 			} else {
 				return new Response('Failed to fetch one or both image buffers.', { status: 500 });
 			}
@@ -87,7 +112,14 @@ export default {
 		}
 	},
 
-	async scheduled(_controller: any, env: { CRON_CONTAINER: DurableObjectNamespace<CronContainer>; NASA_API_KEY: string }, ectx: ExecutionContext) {
+	async scheduled(
+		_controller: any,
+		env: {
+			CRON_CONTAINER: DurableObjectNamespace<CronContainer>;
+			NASA_API_KEY: string;
+		},
+		ectx: ExecutionContext
+	) {
 		const container = getContainer(env.CRON_CONTAINER);
 		await container.start({
 			env: {
@@ -108,3 +140,31 @@ export default {
 		}
 	},
 };
+
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+	const bytes = new Uint8Array(buffer);
+	let result = '';
+	let i = 0;
+	const l = bytes.length;
+	for (i = 2; i < l; i += 3) {
+		result += chars[bytes[i - 2] >> 2];
+		result += chars[((bytes[i - 2] & 3) << 4) | (bytes[i - 1] >> 4)];
+		result += chars[((bytes[i - 1] & 15) << 2) | (bytes[i] >> 6)];
+		result += chars[bytes[i] & 63];
+	}
+	if (i === l + 1) {
+		// 1 octet yet to write
+		result += chars[bytes[i - 2] >> 2];
+		result += chars[(bytes[i - 2] & 3) << 4];
+		result += '==';
+	}
+	if (i === l) {
+		// 2 octets yet to write
+		result += chars[bytes[i - 2] >> 2];
+		result += chars[((bytes[i - 2] & 3) << 4) | (bytes[i - 1] >> 4)];
+		result += chars[(bytes[i - 1] & 15) << 2];
+		result += '=';
+	}
+	return result;
+}
