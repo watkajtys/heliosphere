@@ -44,5 +44,30 @@
 		"crons": [
 			"* * * * *"
 		]
+	},
+	"containers": [
+		{
+			"class_name": "CronContainer",
+			"image": "./Dockerfile"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "CronContainer",
+				"name": "CRON_CONTAINER"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"new_sqlite_classes": [
+				"CronContainer"
+			],
+			"tag": "v1"
+		}
+	],
+	"vars": {
+		"NASA_API_KEY": "DEMO_KEY"
 	}
 }
