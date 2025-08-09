@@ -1,170 +1,61 @@
-import { Container, getContainer } from '@cloudflare/containers';
-import { createCompositeImage } from './compositor.js';
-import Vips from '@carlsverre/wasm-vips';
-
-export class CronContainer extends Container {
-	sleepAfter = '5m';
-	manualStart = true;
+// This interface is needed for the environment bindings in the fetch handler.
+interface Env {
+	NASA_API_KEY: string;
 }
 
-/**
- * Fetches an SDO image from the NASA Helioviewer API for a given date.
- * @param isoDate - The date in ISO format (e.g., "YYYY-MM-DDTHH:MM:SSZ").
- * @param apiKey - Your Helioviewer API key.
- * @returns A Promise that resolves to an ArrayBuffer of the image data.
- */
-async function fetchSdoImage(isoDate: string, apiKey: string): Promise<ArrayBuffer> {
-	const sourceId = 14; // SDO/AIA 193
-	const apiUrl = `https://helioviewer.org/api/jp2/jp2.php?date=${isoDate}&sourceId=${sourceId}&jpip=true`;
+async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<ArrayBuffer> {
+	// Layering LASCO C2 (sourceId 4) as the base and AIA 171 (sourceId 10) on top.
+	const layers = `[4,1,100],[10,1,100]`;
+	// This value may need to be tuned to get the scaling right between the two instruments.
+	const imageScale = 2.5;
+	const width = 1920;
+	const height = 1200;
 
-	try {
-		const response = await fetch(apiUrl, {
-			headers: {
-				'X-API-Key': apiKey,
-			},
-		});
+	const apiUrl = new URL('https://api.helioviewer.org/v2/takeScreenshot/');
+	apiUrl.searchParams.set('date', isoDate);
+	apiUrl.searchParams.set('layers', layers);
+	apiUrl.searchParams.set('imageScale', imageScale.toString());
+	apiUrl.searchParams.set('width', width.toString());
+	apiUrl.searchParams.set('height', height.toString());
+	apiUrl.searchParams.set('display', 'true');
+	apiUrl.searchParams.set('watermark', 'false');
 
-		if (!response.ok) {
-			throw new Error(`Helioviewer API request failed with status ${response.status}`);
-		}
+	console.log(`Fetching composite image from: ${apiUrl.toString()}`);
 
-		return await response.arrayBuffer();
-	} catch (error) {
-		console.error('Error fetching SDO image:', error);
-		throw error;
+	const response = await fetch(apiUrl.toString(), {
+		headers: {
+			'X-API-Key': apiKey,
+		},
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`Helioviewer API request failed with status ${response.status}: ${errorText}`);
 	}
-}
 
-/**
- * Fetches a SOHO/LASCO C2 coronagraph image from the NASA Helioviewer API for a given date.
- * @param isoDate - The date in ISO format (e.g., "YYYY-MM-DDTHH:MM:SSZ").
- * @param apiKey - Your Helioviewer API key.
- * @returns A Promise that resolves to an ArrayBuffer of the image data.
- */
-async function fetchSohoImage(isoDate: string, apiKey: string): Promise<ArrayBuffer> {
-	const sourceId = 6; // SOHO/LASCO C2
-	const apiUrl = `https://helioviewer.org/api/jp2/jp2.php?date=${isoDate}&sourceId=${sourceId}&jpip=true`;
-
-	try {
-		const response = await fetch(apiUrl, {
-			headers: {
-				'X-API-Key': apiKey,
-			},
-		});
-
-		if (!response.ok) {
-			throw new Error(`Helioviewer API request failed with status ${response.status}`);
-		}
-
-		return await response.arrayBuffer();
-	} catch (error) {
-		console.error('Error fetching SOHO image:', error);
-		throw error;
-	}
+	return response.arrayBuffer();
 }
 
 export default {
-	async fetch(
-		_req: Request,
-		env: {
-			CRON_CONTAINER: DurableObjectNamespace<CronContainer>;
-			NASA_API_KEY: string;
-		},
-		_ectx: ExecutionContext
-	): Promise<Response> {
+	async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const now = new Date().toISOString();
 		const apiKey = env.NASA_API_KEY;
 
 		try {
-			const [sdoBuffer, sohoBuffer] = await Promise.all([fetchSdoImage(now, apiKey), fetchSohoImage(now, apiKey)]);
+			// The actual implementation of fetchCompositeImage will be done in the next step.
+			// For now, this will throw an error, which is expected for this refactoring step.
+			const imageBuffer = await fetchCompositeImage(now, apiKey);
 
-			if (sdoBuffer && sohoBuffer) {
-				const vips = await Vips();
-				const sdoImage = vips.Image.newFromBuffer(sdoBuffer);
-				const sohoImage = vips.Image.newFromBuffer(sohoBuffer);
-
-				const sdoJpegBuffer = sdoImage.writeToBuffer('.jpg');
-				const sohoJpegBuffer = sohoImage.writeToBuffer('.jpg');
-
-				const sdoBase64 = arrayBufferToBase64(sdoJpegBuffer);
-				const sohoBase64 = arrayBufferToBase64(sohoJpegBuffer);
-
-				const html = `
-					<html>
-						<body>
-							<h1>SDO Image</h1>
-							<img src="data:image/jpeg;base64,${sdoBase64}" />
-							<h1>SOHO Image</h1>
-							<img src="data:image/jpeg;base64,${sohoBase64}" />
-						</body>
-					</html>
-				`;
-
-				return new Response(html, {
-					headers: { 'Content-Type': 'text/html' },
-				});
-			} else {
-				return new Response('Failed to fetch one or both image buffers.', { status: 500 });
-			}
+			return new Response(imageBuffer, {
+				headers: {
+					'Content-Type': 'image/png',
+				},
+			});
 		} catch (error) {
-			console.error('Error fetching images:', error);
-			return new Response('An error occurred while fetching images.', { status: 500 });
-		}
-	},
-
-	async scheduled(
-		_controller: any,
-		env: {
-			CRON_CONTAINER: DurableObjectNamespace<CronContainer>;
-			NASA_API_KEY: string;
-		},
-		ectx: ExecutionContext
-	) {
-		const container = getContainer(env.CRON_CONTAINER);
-		await container.start({
-			env: {
-				NASA_API_KEY: env.NASA_API_KEY,
-			},
-		});
-
-		// Give the container a moment to start up
-		await new Promise((resolve) => setTimeout(resolve, 5000));
-
-		const resp = await container.fetch('http://localhost:8080');
-
-		if (resp.ok) {
-			console.log('Successfully fetched image from container');
-		} else {
-			const text = await resp.text();
-			console.error('Failed to fetch image from container:', text);
+			console.error('Error fetching composite image:', error);
+			return new Response('An error occurred while fetching the composite image.', {
+				status: 500,
+			});
 		}
 	},
 };
-
-const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-	const bytes = new Uint8Array(buffer);
-	let result = '';
-	let i = 0;
-	const l = bytes.length;
-	for (i = 2; i < l; i += 3) {
-		result += chars[bytes[i - 2] >> 2];
-		result += chars[((bytes[i - 2] & 3) << 4) | (bytes[i - 1] >> 4)];
-		result += chars[((bytes[i - 1] & 15) << 2) | (bytes[i] >> 6)];
-		result += chars[bytes[i] & 63];
-	}
-	if (i === l + 1) {
-		// 1 octet yet to write
-		result += chars[bytes[i - 2] >> 2];
-		result += chars[(bytes[i - 2] & 3) << 4];
-		result += '==';
-	}
-	if (i === l) {
-		// 2 octets yet to write
-		result += chars[bytes[i - 2] >> 2];
-		result += chars[((bytes[i - 2] & 3) << 4) | (bytes[i - 1] >> 4)];
-		result += chars[(bytes[i - 1] & 15) << 2];
-		result += '=';
-	}
-	return result;
-}
