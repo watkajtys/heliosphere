@@ -5,8 +5,13 @@ interface Env {
 
 async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<ArrayBuffer> {
 	// Layering LASCO C2 (sourceId 4) as the base and AIA 171 (sourceId 10) on top.
-	const layers = `[4,1,100],[10,1,100]`;
+	const layers = `[[4,1,100],[10,1,100]]`;
 	// This value may need to be tuned to get the scaling right between the two instruments.
+	// The SOHO/LASCO C2 instrument has a much wider field of view than SDO/AIA.
+	// A value of ~0.5 might be a good starting point for LASCO C2, while AIA 171 might need a different scale.
+	// The takeScreenshot API seems to apply the same scale to all layers, which might be the source of the problem.
+	// A potential solution is to make two separate requests and composite them manually,
+	// or to find a scale that works reasonably well for both.
 	const imageScale = 2.5;
 	const width = 1920;
 	const height = 1200;
