@@ -40,33 +40,6 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
 	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
-	"triggers": {
-		"crons": [
-			"* * * * *"
-		]
-	},
-	"containers": [
-		{
-			"class_name": "CronContainer",
-			"image": "./Dockerfile"
-		}
-	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"class_name": "CronContainer",
-				"name": "CRON_CONTAINER"
-			}
-		]
-	},
-	"migrations": [
-		{
-			"new_sqlite_classes": [
-				"CronContainer"
-			],
-			"tag": "v1"
-		}
-	],
 	"vars": {
 		"NASA_API_KEY": "DEMO_KEY"
 	}

@@ -13,6 +13,6 @@
 		"wrangler": "^4.28.1"
 	},
 	"dependencies": {
-		"@cloudflare/containers": "^0.0.25"
+		"wasm-vips": "*"
 	}
 }
