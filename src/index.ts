@@ -61,13 +61,28 @@ async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Buf
 	const coronaImageScale = 8;
 	const coronaImagePromise = fetchHelioviewerImage(isoDate, apiKey, 4, coronaImageScale, width, height);
 
-	const sunDiskImageScale = 1920 / width;
-	const sunDiskImagePromise = fetchHelioviewerImage(isoDate, apiKey, 10, sunDiskImageScale, width, height);
+	const sunDiskImageScale = 2.5;
+	const sunDiskImagePromise = fetchHelioviewerImage(isoDate, apiKey, 10, sunDiskImageScale, width, width);
 
 	const [coronaImage, sunDiskImage] = await Promise.all([coronaImagePromise, sunDiskImagePromise]);
 
 	const sunDiameterInCoronaImage = Math.round(1920 / coronaImageScale);
-	const resizedSunDisk = await sharp(sunDiskImage).resize(sunDiameterInCoronaImage, sunDiameterInCoronaImage).toBuffer();
+
+	const circleSvg = Buffer.from(
+		`<svg width="${sunDiameterInCoronaImage}" height="${sunDiameterInCoronaImage}"><circle cx="${
+			sunDiameterInCoronaImage / 2
+		}" cy="${sunDiameterInCoronaImage / 2}" r="${sunDiameterInCoronaImage / 2}" /></svg>`,
+	);
+
+	const resizedSunDisk = await sharp(sunDiskImage)
+		.resize(sunDiameterInCoronaImage, sunDiameterInCoronaImage)
+		.composite([
+			{
+				input: circleSvg,
+				blend: 'in',
+			},
+		])
+		.toBuffer();
 
 	const finalImage = await sharp(coronaImage)
 		.composite([{ input: resizedSunDisk, gravity: 'center' }])
