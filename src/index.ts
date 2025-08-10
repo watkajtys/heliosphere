@@ -59,7 +59,7 @@ async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Buf
 	const height = 1200;
 
 	const coronaImageScale = 8;
-	const coronaImagePromise = fetchHelioviewerImage(isoDate, apiKey, 29, coronaImageScale, width, height);
+	const coronaImagePromise = fetchHelioviewerImage(isoDate, apiKey, 4, coronaImageScale, width, height);
 
 	const sunDiskImageScale = 2.5;
 	const sunDiskImagePromise = fetchHelioviewerImage(isoDate, apiKey, 10, sunDiskImageScale, width, width);
