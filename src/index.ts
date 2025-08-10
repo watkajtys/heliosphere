@@ -66,10 +66,14 @@ async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Buf
 
 	const [coronaImage, sunDiskImage] = await Promise.all([coronaImagePromise, sunDiskImagePromise]);
 
-	// As determined in the analysis phase, we need to resize the sun disk image to 1200x1200
-	// to make the sun's diameter (768px in the original) fit the occulting disk (estimated at 480px).
-	// 1920 * (480 / 768) = 1200
-	const resizedSunDisk = await sharp(sunDiskImage).resize(1200, 1200).toBuffer();
+	// As determined in the analysis phase, we need to resize the sun disk image to 1600x1600
+	// to make the sun's diameter (768px in the original) fit the occulting disk (estimated at 640px).
+	// 1920 * (640 / 768) = 1600
+	// We then extract the central 1200x1200 portion of the resized image to fit onto the corona image.
+	const resizedSunDisk = await sharp(sunDiskImage)
+		.resize(1600, 1600)
+		.extract({ left: 200, top: 200, width: 1200, height: 1200 })
+		.toBuffer();
 
 	const finalImage = await sharp(coronaImage)
 		.composite([{ input: resizedSunDisk, gravity: 'center', blend: 'screen' }])
