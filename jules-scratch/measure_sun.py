@@ -1,31 +1,29 @@
 from PIL import Image
+import numpy as np
 
 def measure_sun_disk(image_path):
     """
-    Measures the diameter of the sun disk in an image.
-    Assumes the sun is centered and the background is black.
+    Measures the diameter of the sun disk in an image using a gradient-based approach.
+    This method is more robust against fainter outer layers like the corona or flares.
+    Assumes the sun is centered.
     """
     with Image.open(image_path) as img:
-        # Convert to grayscale to simplify pixel value checking
+        # Convert to grayscale to work with brightness values
         img = img.convert('L')
         width, height = img.size
         center_y = height // 2
 
-        # Scan from left edge to the right to find the first bright pixel
-        left_edge = 0
-        for x in range(width):
-            pixel_brightness = img.getpixel((x, center_y))
-            if pixel_brightness > 20: # Threshold for brightness
-                left_edge = x
-                break
+        # Extract pixel brightness along the horizontal centerline
+        pixels = [img.getpixel((x, center_y)) for x in range(width)]
+        pixels_array = np.array(pixels)
 
-        # Scan from right edge to the left to find the first bright pixel
-        right_edge = width -1
-        for x in range(width - 1, 0, -1):
-            pixel_brightness = img.getpixel((x, center_y))
-            if pixel_brightness > 20:
-                right_edge = x
-                break
+        # Calculate the gradient of the brightness profile
+        gradient = np.gradient(pixels_array)
+
+        # The edge of the sun disk corresponds to the sharpest change in brightness,
+        # which means the maximum and minimum points of the gradient.
+        left_edge = np.argmax(gradient)
+        right_edge = np.argmin(gradient)
 
         diameter = right_edge - left_edge
         return diameter
