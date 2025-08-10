@@ -23,12 +23,12 @@ async function fetchHelioviewerImage(
 	apiUrl.searchParams.set('date', isoDate);
 	apiUrl.searchParams.set('layers', `[${sourceId},1,100]`);
 	apiUrl.searchParams.set('imageScale', imageScale.toString());
-	apiUrl.searchParams.set('width', width.toString());
-	apiUrl.searchParams.set('height', height.toString());
-	apiUrl.searchParams.set('x0', '0');
-	apiUrl.searchParams.set('y0', '0');
-	apiUrl.searchParams.set('display', 'true');
-	apiUrl.searchParams.set('watermark', 'false');
+	apiUrl.search_params.set('width', width.toString());
+	apiUrl.search_params.set('height', height.toString());
+	apiUrl.search_params.set('x0', '0');
+	apiUrl.search_params.set('y0', '0');
+	apiUrl.search_params.set('display', 'true');
+	apiUrl.search_params.set('watermark', 'false');
 
 	console.log(`Fetching Helioviewer image from: ${apiUrl.toString()}`);
 
@@ -116,6 +116,7 @@ async function measureSunDisk(imageBuffer: Buffer): Promise<number> {
 
 	return rightEdge - leftEdge;
 }
+
 
 /**
  * Fetches a composite image of the sun, with the corona and the solar disk.
