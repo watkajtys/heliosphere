@@ -1,6 +1,5 @@
 import express from 'express';
 import sharp from 'sharp';
-import fetch from 'node-fetch';
 
 /**
  * Fetches an image from the Helioviewer API for a single data source.
@@ -44,7 +43,8 @@ async function fetchHelioviewerImage(
 		throw new Error(`Helioviewer API request failed with status ${response.status}: ${errorText}`);
 	}
 
-	return response.buffer();
+	const arrayBuffer = await response.arrayBuffer();
+	return Buffer.from(arrayBuffer);
 }
 
 /**
