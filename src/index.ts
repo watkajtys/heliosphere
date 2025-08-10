@@ -66,26 +66,13 @@ async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Buf
 
 	const [coronaImage, sunDiskImage] = await Promise.all([coronaImagePromise, sunDiskImagePromise]);
 
-	const sunDiameterInCoronaImage = Math.round(1920 / coronaImageScale);
-
-	const circleSvg = Buffer.from(
-		`<svg width="${sunDiameterInCoronaImage}" height="${sunDiameterInCoronaImage}"><circle cx="${
-			sunDiameterInCoronaImage / 2
-		}" cy="${sunDiameterInCoronaImage / 2}" r="${sunDiameterInCoronaImage / 2}" /></svg>`,
-	);
-
-	const resizedSunDisk = await sharp(sunDiskImage)
-		.resize(sunDiameterInCoronaImage, sunDiameterInCoronaImage)
-		.composite([
-			{
-				input: circleSvg,
-				blend: 'in',
-			},
-		])
-		.toBuffer();
+	// As determined in the analysis phase, we need to resize the sun disk image to 1200x1200
+	// to make the sun's diameter (768px in the original) fit the occulting disk (estimated at 480px).
+	// 1920 * (480 / 768) = 1200
+	const resizedSunDisk = await sharp(sunDiskImage).resize(1200, 1200).toBuffer();
 
 	const finalImage = await sharp(coronaImage)
-		.composite([{ input: resizedSunDisk, gravity: 'center' }])
+		.composite([{ input: resizedSunDisk, gravity: 'center', blend: 'screen' }])
 		.png()
 		.toBuffer();
 
@@ -96,11 +83,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/', async (req, res) => {
-	const now = '2023-01-01T00:00:00Z';
+	const isoDate = req.query.date ? (req.query.date as string) : new Date().toISOString();
 	const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
 
 	try {
-		const imageBuffer = await fetchCompositeImage(now, apiKey);
+		const imageBuffer = await fetchCompositeImage(isoDate, apiKey);
 		res.set('Content-Type', 'image/png');
 		res.send(imageBuffer);
 	} catch (error) {
