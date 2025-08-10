@@ -1,3 +1,1 @@
 Server listening on port 3000
-Fetching Helioviewer image from: https://api.helioviewer.org/v2/takeScreenshot/?date=2023-01-01T00%3A00%3A00Z&layers=%5B29%2C1%2C100%5D&imageScale=8&width=1920&height=1200&x0=0&y0=0&display=true&watermark=false
-Fetching Helioviewer image from: https://api.helioviewer.org/v2/takeScreenshot/?date=2023-01-01T00%3A00%3A00Z&layers=%5B10%2C1%2C100%5D&imageScale=2.5&width=1920&height=1920&x0=0&y0=0&display=true&watermark=false
