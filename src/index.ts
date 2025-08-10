@@ -1,31 +1,37 @@
-// This interface is needed for the environment bindings in the fetch handler.
-interface Env {
-	NASA_API_KEY: string;
-}
+import express from 'express';
+import sharp from 'sharp';
+import fetch from 'node-fetch';
 
-async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<ArrayBuffer> {
-	// Layering LASCO C2 (sourceId 4) as the base and AIA 171 (sourceId 10) on top.
-	const layers = `[[4,1,100],[10,1,100]]`;
-	// This value may need to be tuned to get the scaling right between the two instruments.
-	// The SOHO/LASCO C2 instrument has a much wider field of view than SDO/AIA.
-	// A value of ~0.5 might be a good starting point for LASCO C2, while AIA 171 might need a different scale.
-	// The takeScreenshot API seems to apply the same scale to all layers, which might be the source of the problem.
-	// A potential solution is to make two separate requests and composite them manually,
-	// or to find a scale that works reasonably well for both.
-	const imageScale = 2.5;
-	const width = 1920;
-	const height = 1200;
-
+/**
+ * Fetches an image from the Helioviewer API for a single data source.
+ * @param isoDate The date of the image to fetch in ISO format.
+ * @param apiKey The NASA API key to use for the request.
+ * @param sourceId The ID of the data source to fetch the image from.
+ * @param imageScale The scale of the image in arcseconds per pixel.
+ * @param width The width of the image in pixels.
+ * @param height The height of the image in pixels.
+ * @returns A promise that resolves to the image data as an ArrayBuffer.
+ */
+async function fetchHelioviewerImage(
+	isoDate: string,
+	apiKey: string,
+	sourceId: number,
+	imageScale: number,
+	width: number,
+	height: number,
+): Promise<Buffer> {
 	const apiUrl = new URL('https://api.helioviewer.org/v2/takeScreenshot/');
 	apiUrl.searchParams.set('date', isoDate);
-	apiUrl.searchParams.set('layers', layers);
+	apiUrl.searchParams.set('layers', `[${sourceId},1,100]`);
 	apiUrl.searchParams.set('imageScale', imageScale.toString());
 	apiUrl.searchParams.set('width', width.toString());
 	apiUrl.searchParams.set('height', height.toString());
+	apiUrl.searchParams.set('x0', '0');
+	apiUrl.searchParams.set('y0', '0');
 	apiUrl.searchParams.set('display', 'true');
 	apiUrl.searchParams.set('watermark', 'false');
 
-	console.log(`Fetching composite image from: ${apiUrl.toString()}`);
+	console.log(`Fetching Helioviewer image from: ${apiUrl.toString()}`);
 
 	const response = await fetch(apiUrl.toString(), {
 		headers: {
@@ -38,29 +44,56 @@ async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Arr
 		throw new Error(`Helioviewer API request failed with status ${response.status}: ${errorText}`);
 	}
 
-	return response.arrayBuffer();
+	return response.buffer();
 }
 
-export default {
-	async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const now = new Date().toISOString();
-		const apiKey = env.NASA_API_KEY;
+/**
+ * Fetches a composite image of the sun, with the corona and the solar disk.
+ * This function fetches two separate images from the Helioviewer API and composites them together.
+ * @param isoDate The date of the image to fetch in ISO format.
+ * @param apiKey The NASA API key to use for the request.
+ * @returns A promise that resolves to the composited image data as a Buffer.
+ */
+async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Buffer> {
+	const width = 1920;
+	const height = 1200;
 
-		try {
-			// The actual implementation of fetchCompositeImage will be done in the next step.
-			// For now, this will throw an error, which is expected for this refactoring step.
-			const imageBuffer = await fetchCompositeImage(now, apiKey);
+	const coronaImageScale = 8;
+	const coronaImagePromise = fetchHelioviewerImage(isoDate, apiKey, 4, coronaImageScale, width, height);
 
-			return new Response(imageBuffer, {
-				headers: {
-					'Content-Type': 'image/png',
-				},
-			});
-		} catch (error) {
-			console.error('Error fetching composite image:', error);
-			return new Response('An error occurred while fetching the composite image.', {
-				status: 500,
-			});
-		}
-	},
-};
+	const sunDiskImageScale = 1920 / width;
+	const sunDiskImagePromise = fetchHelioviewerImage(isoDate, apiKey, 10, sunDiskImageScale, width, height);
+
+	const [coronaImage, sunDiskImage] = await Promise.all([coronaImagePromise, sunDiskImagePromise]);
+
+	const sunDiameterInCoronaImage = Math.round(1920 / coronaImageScale);
+	const resizedSunDisk = await sharp(sunDiskImage).resize(sunDiameterInCoronaImage, sunDiameterInCoronaImage).toBuffer();
+
+	const finalImage = await sharp(coronaImage)
+		.composite([{ input: resizedSunDisk, gravity: 'center' }])
+		.png()
+		.toBuffer();
+
+	return finalImage;
+}
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/', async (req, res) => {
+	const now = '2023-01-01T00:00:00Z';
+	const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
+
+	try {
+		const imageBuffer = await fetchCompositeImage(now, apiKey);
+		res.set('Content-Type', 'image/png');
+		res.send(imageBuffer);
+	} catch (error) {
+		console.error('Error fetching composite image:', error);
+		res.status(500).send('An error occurred while fetching the composite image.');
+	}
+});
+
+app.listen(port, () => {
+	console.log(`Server listening on port ${port}`);
+});

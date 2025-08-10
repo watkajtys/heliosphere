@@ -2,15 +2,19 @@
 	"name": "heliosphere",
 	"version": "0.0.0",
 	"private": true,
+	"type": "module",
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev --test-scheduled",
-		"start": "wrangler dev --test-scheduled",
-		"cf-typegen": "wrangler types"
+		"start": "node dist/index.js",
+		"build": "tsc"
 	},
 	"devDependencies": {
 		"typescript": "^5.5.2",
-		"wrangler": "^4.28.1"
+		"wrangler": "^4.28.1",
+		"node-fetch": "^3.3.2",
+		"@types/express": "^4.17.21"
 	},
-	"dependencies": {}
+	"dependencies": {
+		"sharp": "^0.33.4",
+		"express": "^4.19.2"
+	}
 }
