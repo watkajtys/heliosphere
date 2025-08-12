@@ -1,0 +1,158 @@
+{
+  "timestamp": "2025-08-12T05:29:35.602Z",
+  "testFrames": 10,
+  "sdo": {
+    "totalFrames": 10,
+    "uniqueFrames": 9,
+    "updateRate": 0.9,
+    "results": [
+      {
+        "frame": "001",
+        "checksum": "d68b373055c81928d062f8e62fb2425e",
+        "size": 666342,
+        "actualDate": "2025-08-10T05:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "002",
+        "checksum": "df5a7de059c05c37a5f76e7a4654c23c",
+        "size": 666556,
+        "actualDate": "2025-08-10T04:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "003",
+        "checksum": "046be6132dd9da5c2f98b36caebdb8cd",
+        "size": 665614,
+        "actualDate": "2025-08-10T04:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "004",
+        "checksum": "046be6132dd9da5c2f98b36caebdb8cd",
+        "size": 665614,
+        "actualDate": "2025-08-10T03:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "005",
+        "checksum": "6303c5956f3b4350da1ada32b10d2e0c",
+        "size": 664519,
+        "actualDate": "2025-08-10T03:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "006",
+        "checksum": "b7c7b113ab69fa2e3920fbbbf665463b",
+        "size": 665332,
+        "actualDate": "2025-08-10T02:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "007",
+        "checksum": "e2c9fa3274b73184545fb37e8b13c58a",
+        "size": 665127,
+        "actualDate": "2025-08-10T02:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "008",
+        "checksum": "8ba77cf69e7f45de512d45dfa450e98e",
+        "size": 664940,
+        "actualDate": "2025-08-10T01:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "009",
+        "checksum": "c58422c9b18f4aab129393cfe4378906",
+        "size": 665492,
+        "actualDate": "2025-08-10T01:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "010",
+        "checksum": "5d9314a83cd9d9432fc130211f335d24",
+        "size": 664892,
+        "actualDate": "2025-08-10T00:57:56.054Z",
+        "fallbackUsed": false
+      }
+    ]
+  },
+  "lasco": {
+    "totalFrames": 10,
+    "uniqueFrames": 10,
+    "updateRate": 1,
+    "results": [
+      {
+        "frame": "001",
+        "checksum": "9e0b78d8b7aa22438050195d60215fbf",
+        "size": 852256,
+        "actualDate": "2025-08-10T05:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "002",
+        "checksum": "2de06ff232dd22c525443d8bdf5de7e4",
+        "size": 852483,
+        "actualDate": "2025-08-10T04:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "003",
+        "checksum": "ecc134f8c4e04ec22a0a9c2f06437552",
+        "size": 843158,
+        "actualDate": "2025-08-10T04:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "004",
+        "checksum": "35be1881ff83509c9eee38bc7c2936e2",
+        "size": 852178,
+        "actualDate": "2025-08-10T03:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "005",
+        "checksum": "7eae35086135db2ff11d817259099e20",
+        "size": 852482,
+        "actualDate": "2025-08-10T03:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "006",
+        "checksum": "5b1b3d2af4c838f66b1c996a12a6586c",
+        "size": 852641,
+        "actualDate": "2025-08-10T02:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "007",
+        "checksum": "01f02c8e027a6710ae22d05abf1207d1",
+        "size": 852143,
+        "actualDate": "2025-08-10T02:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "008",
+        "checksum": "ef509ab4716ac9a98385253987c948a9",
+        "size": 850634,
+        "actualDate": "2025-08-10T01:57:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "009",
+        "checksum": "3bf6906eba0ef5f9c7778a31a9504106",
+        "size": 849509,
+        "actualDate": "2025-08-10T01:27:56.054Z",
+        "fallbackUsed": false
+      },
+      {
+        "frame": "010",
+        "checksum": "10dbed2b4ae8ecaea7bee4d840b5b5f1",
+        "size": 834076,
+        "actualDate": "2025-08-10T00:57:56.054Z",
+        "fallbackUsed": false
+      }
+    ]
+  }
+}

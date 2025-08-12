@@ -1,0 +1,384 @@
+{
+  "status": "running",
+  "progress": {
+    "current": 644,
+    "total": 3600
+  },
+  "performance": {
+    "avgTime": 7.3364798136645994,
+    "totalTime": 4724.693000000002
+  },
+  "fallbacks": {
+    "count": 22,
+    "rate": 0.034161490683229816,
+    "details": [
+      {
+        "frameNum": "016",
+        "targetTimestamp": "2025-07-05T11:01:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-05T11:01:34.485Z",
+          "actualTime": "2025-07-05T11:16:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "112",
+        "targetTimestamp": "2025-07-06T11:01:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-06T11:01:34.485Z",
+          "actualTime": "2025-07-06T11:16:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "232",
+        "targetTimestamp": "2025-07-07T17:01:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-07T17:01:34.485Z",
+          "actualTime": "2025-07-07T17:16:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "239",
+        "targetTimestamp": "2025-07-07T18:46:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-07T18:46:34.485Z",
+          "actualTime": "2025-07-07T19:01:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "238",
+        "targetTimestamp": "2025-07-07T18:31:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-07T18:31:34.485Z",
+          "actualTime": "2025-07-07T19:01:34.485Z",
+          "timeDelta": 30,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "304",
+        "targetTimestamp": "2025-07-08T11:01:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-08T11:01:34.485Z",
+          "actualTime": "2025-07-08T11:16:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "351",
+        "targetTimestamp": "2025-07-08T22:46:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-08T22:46:34.485Z",
+          "actualTime": "2025-07-08T23:31:34.485Z",
+          "timeDelta": 45,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "350",
+        "targetTimestamp": "2025-07-08T22:31:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-08T22:31:34.485Z",
+          "actualTime": "2025-07-08T23:31:34.485Z",
+          "timeDelta": 60,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "349",
+        "targetTimestamp": "2025-07-08T22:16:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-08T22:16:34.485Z",
+          "actualTime": "2025-07-08T21:16:34.485Z",
+          "timeDelta": 60,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "354",
+        "targetTimestamp": "2025-07-08T23:31:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-08T23:31:34.485Z",
+          "actualTime": "2025-07-08T23:16:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "360",
+        "targetTimestamp": "2025-07-09T01:01:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-09T01:01:34.485Z",
+          "actualTime": "2025-07-09T01:31:34.485Z",
+          "timeDelta": 30,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "359",
+        "targetTimestamp": "2025-07-09T00:46:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-09T00:46:34.485Z",
+          "actualTime": "2025-07-09T01:31:34.485Z",
+          "timeDelta": 45,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "358",
+        "targetTimestamp": "2025-07-09T00:31:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-09T00:31:34.485Z",
+          "actualTime": "2025-07-09T01:31:34.485Z",
+          "timeDelta": 60,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "362",
+        "targetTimestamp": "2025-07-09T01:31:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-09T01:31:34.485Z",
+          "actualTime": "2025-07-09T01:46:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "379",
+        "targetTimestamp": "2025-07-09T05:46:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-09T05:46:34.485Z",
+          "actualTime": "2025-07-09T06:01:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "434",
+        "targetTimestamp": "2025-07-09T19:31:34.485Z",
+        "sdoFallback": {
+          "requestedTime": "2025-07-09T19:31:34.485Z",
+          "actualTime": "2025-07-09T19:43:34.485Z",
+          "timeDelta": 12,
+          "unique": true
+        },
+        "lascoFallback": null,
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "433",
+        "targetTimestamp": "2025-07-09T19:16:34.485Z",
+        "sdoFallback": {
+          "requestedTime": "2025-07-09T19:16:34.485Z",
+          "actualTime": "2025-07-09T19:40:34.485Z",
+          "timeDelta": 24,
+          "unique": true
+        },
+        "lascoFallback": null,
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "439",
+        "targetTimestamp": "2025-07-09T20:46:34.485Z",
+        "sdoFallback": {
+          "requestedTime": "2025-07-09T20:46:34.485Z",
+          "actualTime": "2025-07-09T20:58:34.485Z",
+          "timeDelta": 12,
+          "unique": true
+        },
+        "lascoFallback": null,
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "447",
+        "targetTimestamp": "2025-07-09T22:46:34.485Z",
+        "sdoFallback": {
+          "requestedTime": "2025-07-09T22:46:34.485Z",
+          "actualTime": "2025-07-09T22:34:34.485Z",
+          "timeDelta": 12,
+          "unique": true
+        },
+        "lascoFallback": null,
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "565",
+        "targetTimestamp": "2025-07-11T04:16:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-11T04:16:34.485Z",
+          "actualTime": "2025-07-11T04:31:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "577",
+        "targetTimestamp": "2025-07-11T07:16:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-11T07:16:34.485Z",
+          "actualTime": "2025-07-11T07:31:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      },
+      {
+        "frameNum": "592",
+        "targetTimestamp": "2025-07-11T11:01:34.485Z",
+        "sdoFallback": null,
+        "lascoFallback": {
+          "requestedTime": "2025-07-11T11:01:34.485Z",
+          "actualTime": "2025-07-11T11:16:34.485Z",
+          "timeDelta": 15,
+          "unique": true
+        },
+        "fallbackResolved": true
+      }
+    ]
+  },
+  "log": [
+    "[07:48:03] 🎬 Frame 662/3600: 2025-07-12T04:31:34.485Z ",
+    "[07:48:03]    🔍 Previous SDO: a571594e...",
+    "[07:48:03] 🎬 Frame 663/3600: 2025-07-12T04:46:34.485Z ",
+    "[07:48:03]    🔍 Previous SDO: a571594e...",
+    "[07:48:05] 🎬 Frame 661/3600: 2025-07-12T04:16:34.485Z (Retry 2)",
+    "[07:48:05]    🔍 Previous SDO: a571594e...",
+    "[07:48:05] 🎬 Frame 662/3600: 2025-07-12T04:31:34.485Z (Retry 2)",
+    "[07:48:05]    🔍 Previous SDO: a571594e...",
+    "[07:48:05] 🎬 Frame 663/3600: 2025-07-12T04:46:34.485Z (Retry 2)",
+    "[07:48:05]    🔍 Previous SDO: a571594e...",
+    "[07:48:06] 🎬 Frame 664/3600: 2025-07-12T05:01:34.485Z ",
+    "[07:48:06]    🔍 Previous SDO: a571594e...",
+    "[07:48:06] 🎬 Frame 665/3600: 2025-07-12T05:16:34.485Z ",
+    "[07:48:06]    🔍 Previous SDO: a571594e...",
+    "[07:48:06] 🎬 Frame 666/3600: 2025-07-12T05:31:34.485Z ",
+    "[07:48:06]    🔍 Previous SDO: a571594e...",
+    "[07:48:08] 🎬 Frame 664/3600: 2025-07-12T05:01:34.485Z (Retry 2)",
+    "[07:48:08]    🔍 Previous SDO: a571594e...",
+    "[07:48:08] 🎬 Frame 665/3600: 2025-07-12T05:16:34.485Z (Retry 2)",
+    "[07:48:08]    🔍 Previous SDO: a571594e...",
+    "[07:48:08] 🎬 Frame 666/3600: 2025-07-12T05:31:34.485Z (Retry 2)",
+    "[07:48:08]    🔍 Previous SDO: a571594e...",
+    "[07:48:09] 🎬 Frame 667/3600: 2025-07-12T05:46:34.485Z ",
+    "[07:48:09]    🔍 Previous SDO: a571594e...",
+    "[07:48:09] 🎬 Frame 668/3600: 2025-07-12T06:01:34.485Z ",
+    "[07:48:09]    🔍 Previous SDO: a571594e...",
+    "[07:48:09] 🎬 Frame 669/3600: 2025-07-12T06:16:34.485Z ",
+    "[07:48:09]    🔍 Previous SDO: a571594e...",
+    "[07:48:11] 🎬 Frame 667/3600: 2025-07-12T05:46:34.485Z (Retry 2)",
+    "[07:48:11]    🔍 Previous SDO: a571594e...",
+    "[07:48:11] 🎬 Frame 668/3600: 2025-07-12T06:01:34.485Z (Retry 2)",
+    "[07:48:11]    🔍 Previous SDO: a571594e...",
+    "[07:48:11] 🎬 Frame 669/3600: 2025-07-12T06:16:34.485Z (Retry 2)",
+    "[07:48:11]    🔍 Previous SDO: a571594e...",
+    "[07:48:12] 🎬 Frame 670/3600: 2025-07-12T06:31:34.485Z ",
+    "[07:48:12]    🔍 Previous SDO: a571594e...",
+    "[07:48:12] 🎬 Frame 671/3600: 2025-07-12T06:46:34.485Z ",
+    "[07:48:12]    🔍 Previous SDO: a571594e...",
+    "[07:48:12] 🎬 Frame 672/3600: 2025-07-12T07:01:34.485Z ",
+    "[07:48:12]    🔍 Previous SDO: a571594e...",
+    "[07:48:14] 🎬 Frame 670/3600: 2025-07-12T06:31:34.485Z (Retry 2)",
+    "[07:48:14]    🔍 Previous SDO: a571594e...",
+    "[07:48:14] 🎬 Frame 671/3600: 2025-07-12T06:46:34.485Z (Retry 2)",
+    "[07:48:14]    🔍 Previous SDO: a571594e...",
+    "[07:48:14] 🎬 Frame 672/3600: 2025-07-12T07:01:34.485Z (Retry 2)",
+    "[07:48:14]    🔍 Previous SDO: a571594e...",
+    "[07:48:15] 🎬 Frame 673/3600: 2025-07-12T07:16:34.485Z ",
+    "[07:48:15]    🔍 Previous SDO: a571594e...",
+    "[07:48:15] 🎬 Frame 674/3600: 2025-07-12T07:31:34.485Z ",
+    "[07:48:15]    🔍 Previous SDO: a571594e...",
+    "[07:48:15] 🎬 Frame 675/3600: 2025-07-12T07:46:34.485Z ",
+    "[07:48:15]    🔍 Previous SDO: a571594e...",
+    "[07:48:17] 🎬 Frame 673/3600: 2025-07-12T07:16:34.485Z (Retry 2)",
+    "[07:48:17]    🔍 Previous SDO: a571594e...",
+    "[07:48:17] 🎬 Frame 674/3600: 2025-07-12T07:31:34.485Z (Retry 2)",
+    "[07:48:17]    🔍 Previous SDO: a571594e...",
+    "[07:48:17] 🎬 Frame 675/3600: 2025-07-12T07:46:34.485Z (Retry 2)",
+    "[07:48:17]    🔍 Previous SDO: a571594e...",
+    "[07:48:18] 🎬 Frame 676/3600: 2025-07-12T08:01:34.485Z ",
+    "[07:48:18]    🔍 Previous SDO: a571594e...",
+    "[07:48:18] 🎬 Frame 677/3600: 2025-07-12T08:16:34.485Z ",
+    "[07:48:18]    🔍 Previous SDO: a571594e...",
+    "[07:48:18] 🎬 Frame 678/3600: 2025-07-12T08:31:34.485Z ",
+    "[07:48:18]    🔍 Previous SDO: a571594e...",
+    "[07:48:20] 🎬 Frame 676/3600: 2025-07-12T08:01:34.485Z (Retry 2)",
+    "[07:48:20]    🔍 Previous SDO: a571594e...",
+    "[07:48:20] 🎬 Frame 677/3600: 2025-07-12T08:16:34.485Z (Retry 2)",
+    "[07:48:20]    🔍 Previous SDO: a571594e...",
+    "[07:48:20] 🎬 Frame 678/3600: 2025-07-12T08:31:34.485Z (Retry 2)",
+    "[07:48:20]    🔍 Previous SDO: a571594e...",
+    "[07:48:21] 🎬 Frame 679/3600: 2025-07-12T08:46:34.485Z ",
+    "[07:48:21]    🔍 Previous SDO: a571594e...",
+    "[07:48:21] 🎬 Frame 680/3600: 2025-07-12T09:01:34.485Z ",
+    "[07:48:21]    🔍 Previous SDO: a571594e...",
+    "[07:48:21] 🎬 Frame 681/3600: 2025-07-12T09:16:34.485Z ",
+    "[07:48:21]    🔍 Previous SDO: a571594e...",
+    "[07:48:23] 🎬 Frame 679/3600: 2025-07-12T08:46:34.485Z (Retry 2)",
+    "[07:48:23]    🔍 Previous SDO: a571594e...",
+    "[07:48:23] 🎬 Frame 680/3600: 2025-07-12T09:01:34.485Z (Retry 2)",
+    "[07:48:23]    🔍 Previous SDO: a571594e...",
+    "[07:48:23] 🎬 Frame 681/3600: 2025-07-12T09:16:34.485Z (Retry 2)",
+    "[07:48:23]    🔍 Previous SDO: a571594e...",
+    "[07:48:24] 🎬 Frame 682/3600: 2025-07-12T09:31:34.485Z ",
+    "[07:48:24]    🔍 Previous SDO: a571594e...",
+    "[07:48:24] 🎬 Frame 683/3600: 2025-07-12T09:46:34.485Z ",
+    "[07:48:24]    🔍 Previous SDO: a571594e...",
+    "[07:48:24] 🎬 Frame 684/3600: 2025-07-12T10:01:34.485Z ",
+    "[07:48:24]    🔍 Previous SDO: a571594e...",
+    "[07:48:26] 🎬 Frame 682/3600: 2025-07-12T09:31:34.485Z (Retry 2)",
+    "[07:48:26]    🔍 Previous SDO: a571594e...",
+    "[07:48:26] 🎬 Frame 683/3600: 2025-07-12T09:46:34.485Z (Retry 2)",
+    "[07:48:26]    🔍 Previous SDO: a571594e...",
+    "[07:48:26] 🎬 Frame 684/3600: 2025-07-12T10:01:34.485Z (Retry 2)",
+    "[07:48:26]    🔍 Previous SDO: a571594e...",
+    "[07:48:27] 🎬 Frame 685/3600: 2025-07-12T10:16:34.485Z ",
+    "[07:48:27]    🔍 Previous SDO: a571594e...",
+    "[07:48:27] 🎬 Frame 686/3600: 2025-07-12T10:31:34.485Z ",
+    "[07:48:27]    🔍 Previous SDO: a571594e...",
+    "[07:48:27] 🎬 Frame 687/3600: 2025-07-12T10:46:34.485Z ",
+    "[07:48:27]    🔍 Previous SDO: a571594e..."
+  ],
+  "lastUpdate": "2025-08-12T07:48:27.572Z"
+}
