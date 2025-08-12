@@ -270,6 +270,7 @@ async function fetchCompositeImage(isoDate: string, apiKey: string): Promise<Buf
 	return finalImage;
 }
 
+
 /**
  * Original circular mask function for backward compatibility
  * @param imageBuffer The image to mask
@@ -2194,6 +2195,7 @@ app.get('/feather-dual', async (req, res) => {
 </html>
 	`);
 });
+
 
 
 app.listen(port, () => {
