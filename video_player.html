@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solar Time-lapse Preview - 44 Frames</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #000; 
+            color: #fff; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px;
+        }
+        .container { max-width: 1440px; margin: 0 auto; }
+        #frame { 
+            max-width: 100%; 
+            height: auto; 
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+        .controls { 
+            margin: 20px 0; 
+            display: flex; 
+            justify-content: center; 
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button { 
+            padding: 10px 20px; 
+            background: #333; 
+            color: #fff; 
+            border: 1px solid #555; 
+            cursor: pointer; 
+            border-radius: 4px;
+        }
+        button:hover { background: #555; }
+        button.active { background: #50fa7b; color: #000; }
+        .info { 
+            background: #222; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin: 20px 0;
+            text-align: left;
+        }
+        .progress { 
+            width: 100%; 
+            height: 4px; 
+            background: #333; 
+            border-radius: 2px; 
+            margin: 10px 0;
+        }
+        .progress-bar { 
+            height: 100%; 
+            background: #50fa7b; 
+            border-radius: 2px; 
+            width: 0%;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌞 Solar Time-lapse Preview</h1>
+        
+        <div class="info">
+            <strong>Coverage:</strong> 22 hours of solar activity (44 frames)<br>
+            <strong>Interval:</strong> 30 minutes between frames<br>
+            <strong>Timeline:</strong> Backwards from 48 hours ago<br>
+            <strong>Resolution:</strong> 1440×1200px (Ad Astra style)<br>
+            <strong>Frame:</strong> <span id="frameInfo">001 / 044</span>
+        </div>
+
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <img id="frame" src="frames/frame_001.png" alt="Solar composite frame">
+
+        <div class="controls">
+            <button onclick="playVideo()" id="playBtn">▶ Play</button>
+            <button onclick="pauseVideo()" id="pauseBtn">⏸ Pause</button>
+            <button onclick="resetVideo()">⏮ Reset</button>
+            <button onclick="changeSpeed(0.5)" id="speed05">0.5x</button>
+            <button onclick="changeSpeed(1)" id="speed1" class="active">1x</button>
+            <button onclick="changeSpeed(2)" id="speed2">2x</button>
+            <button onclick="changeSpeed(4)" id="speed4">4x</button>
+        </div>
+
+        <div class="info">
+            <h3>Video Generation Instructions</h3>
+            <p>To create an MP4 video from these frames, install ffmpeg and run:</p>
+            <pre style="background: #111; padding: 10px; border-radius: 4px; overflow-x: auto;">
+# For 24fps (1.8 second video with 44 frames)
+ffmpeg -framerate 24 -i frames/frame_%03d.png -c:v libx264 -pix_fmt yuv420p -y solar_timelapse.mp4
+
+# For 12fps (3.7 second video with 44 frames)  
+ffmpeg -framerate 12 -i frames/frame_%03d.png -c:v libx264 -pix_fmt yuv420p -y solar_timelapse_slow.mp4
+
+# For smooth 30fps interpolation
+ffmpeg -framerate 15 -i frames/frame_%03d.png -vf "minterpolate=fps=30" -c:v libx264 -pix_fmt yuv420p -y solar_timelapse_smooth.mp4</pre>
+        </div>
+    </div>
+
+    <script>
+        let currentFrame = 1;
+        let isPlaying = false;
+        let playInterval;
+        let speed = 1;
+        const totalFrames = 44;
+
+        function updateFrame() {
+            const frameNum = String(currentFrame).padStart(3, '0');
+            document.getElementById('frame').src = `frames/frame_${frameNum}.png`;
+            document.getElementById('frameInfo').textContent = `${frameNum} / 044`;
+            
+            const progress = (currentFrame / totalFrames) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function playVideo() {
+            if (isPlaying) return;
+            isPlaying = true;
+            
+            document.getElementById('playBtn').style.background = '#50fa7b';
+            document.getElementById('playBtn').style.color = '#000';
+            
+            playInterval = setInterval(() => {
+                currentFrame++;
+                if (currentFrame > totalFrames) {
+                    currentFrame = 1; // Loop
+                }
+                updateFrame();
+            }, 1000 / speed); // Adjust speed
+        }
+
+        function pauseVideo() {
+            isPlaying = false;
+            clearInterval(playInterval);
+            
+            document.getElementById('playBtn').style.background = '#333';
+            document.getElementById('playBtn').style.color = '#fff';
+        }
+
+        function resetVideo() {
+            pauseVideo();
+            currentFrame = 1;
+            updateFrame();
+        }
+
+        function changeSpeed(newSpeed) {
+            speed = newSpeed;
+            
+            // Update active button
+            document.querySelectorAll('[id^="speed"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`speed${newSpeed.toString().replace('.', '')}`).classList.add('active');
+            
+            // Restart playback if playing
+            if (isPlaying) {
+                pauseVideo();
+                playVideo();
+            }
+        }
+
+        // Initialize
+        updateFrame();
+
+        // Auto-play on load (optional)
+        // setTimeout(playVideo, 1000);
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Solar Composite Tuner</title>
+    <title>Solar Composite Tuner - Ad Astra</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; margin: 20px; background: #1a1a1a; color: #eee; }
         .container { max-width: 1200px; margin: 0 auto; text-align: center;}
@@ -16,21 +16,29 @@
 </head>
 <body>
     <div class="container">
-        <h1>Simple Solar Composite Tuner</h1>
+        <h1>Solar Composite Tuner - Ad Astra Style</h1>
 
         <div class="controls">
             <div class="control-group">
-                <label for="compositeRadiusSlider">Composite Radius: <span id="compositeRadiusValue" class="value-display">600</span>px</label>
-                <input type="range" id="compositeRadiusSlider" class="slider" min="400" max="800" value="600" step="5">
+                <label for="compositeRadiusSlider">Composite Radius: <span id="compositeRadiusValue" class="value-display">400</span>px</label>
+                <input type="range" id="compositeRadiusSlider" class="slider" min="400" max="800" value="400" step="5">
             </div>
             <div class="control-group">
                 <label for="featherRadiusSlider">Feather Radius: <span id="featherRadiusValue" class="value-display">40</span>px</label>
                 <input type="range" id="featherRadiusSlider" class="slider" min="0" max="150" value="40" step="1">
             </div>
+            <div class="control-group">
+                <label for="cropWidthSlider">Crop Width: <span id="cropWidthValue" class="value-display">1440</span>px</label>
+                <input type="range" id="cropWidthSlider" class="slider" min="800" max="1920" value="1440" step="10">
+            </div>
+            <div class="control-group">
+                <label for="cropHeightSlider">Crop Height: <span id="cropHeightValue" class="value-display">1200</span>px</label>
+                <input type="range" id="cropHeightSlider" class="slider" min="600" max="1435" value="1200" step="10">
+            </div>
         </div>
 
         <div class="image-container">
-            <img id="compositeImg" src="/composite-image?compositeRadius=600&featherRadius=40" alt="Loading composite image...">
+            <img id="compositeImg" src="/composite-image?compositeRadius=400&featherRadius=40&style=ad-astra&cropWidth=1440&cropHeight=1200" alt="Loading Ad Astra composite..." style="max-width: 100%; border: 2px solid #555; border-radius: 4px; background: #000; margin-top: 20px;">
         </div>
     </div>
 
@@ -39,18 +47,26 @@
         const compositeRadiusValue = document.getElementById('compositeRadiusValue');
         const featherRadiusSlider = document.getElementById('featherRadiusSlider');
         const featherRadiusValue = document.getElementById('featherRadiusValue');
+        const cropWidthSlider = document.getElementById('cropWidthSlider');
+        const cropWidthValue = document.getElementById('cropWidthValue');
+        const cropHeightSlider = document.getElementById('cropHeightSlider');
+        const cropHeightValue = document.getElementById('cropHeightValue');
         const compositeImg = document.getElementById('compositeImg');
 
         function updateImage() {
             const compositeRadius = compositeRadiusSlider.value;
             const featherRadius = featherRadiusSlider.value;
+            const cropWidth = cropWidthSlider.value;
+            const cropHeight = cropHeightSlider.value;
 
             compositeRadiusValue.textContent = compositeRadius;
             featherRadiusValue.textContent = featherRadius;
+            cropWidthValue.textContent = cropWidth;
+            cropHeightValue.textContent = cropHeight;
 
             // Add a timestamp to the URL to force the browser to reload the image
             const timestamp = Date.now();
-            compositeImg.src = `/composite-image?compositeRadius=${compositeRadius}&featherRadius=${featherRadius}&t=${timestamp}`;
+            compositeImg.src = `/composite-image?compositeRadius=${compositeRadius}&featherRadius=${featherRadius}&style=ad-astra&cropWidth=${cropWidth}&cropHeight=${cropHeight}&t=${timestamp}`;
         }
 
         // Update the text display in real-time as the slider moves
@@ -60,13 +76,18 @@
         featherRadiusSlider.addEventListener('input', () => {
             featherRadiusValue.textContent = featherRadiusSlider.value;
         });
+        cropWidthSlider.addEventListener('input', () => {
+            cropWidthValue.textContent = cropWidthSlider.value;
+        });
+        cropHeightSlider.addEventListener('input', () => {
+            cropHeightValue.textContent = cropHeightSlider.value;
+        });
 
-        // Update the image only when the user has finished changing the value (releases the slider)
-        // This prevents sending too many requests to the server.
+        // Update the image when controls change
         compositeRadiusSlider.addEventListener('change', updateImage);
         featherRadiusSlider.addEventListener('change', updateImage);
-
-        // No need for an initial call to updateImage() since the <img> tag's src is already set with default values.
+        cropWidthSlider.addEventListener('change', updateImage);
+        cropHeightSlider.addEventListener('change', updateImage);
     </script>
 </body>
 </html>

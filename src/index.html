@@ -145,15 +145,15 @@
 </head>
 <body>
     <div class="container">
-        <img id="compositeImg" class="composite-image" src="/composite-image?compositeRadius=400&featherRadius=40" alt="Loading solar composite..." onload="hideLoading()">
-        <div id="loading" class="loading">Loading solar composite...</div>
+        <img id="compositeImg" class="composite-image" src="" alt="Solar composite" onload="hideLoading()">
+        <div id="loading" class="loading"></div>
         
         <div class="time-controls">
-            <button class="time-button active" data-time="now">Live</button>
-            <button class="time-button" data-time="1h">1 Hour Ago</button>
-            <button class="time-button" data-time="6h">6 Hours Ago</button>
-            <button class="time-button" data-time="1d">Yesterday</button>
-            <button class="time-button" data-time="1w">1 Week Ago</button>
+            <button class="time-button active" data-time="48h">48hrs ago</button>
+            <button class="time-button" data-time="48.5h">48.5hrs ago</button>
+            <button class="time-button" data-time="49h">49hrs ago</button>
+            <button class="time-button" data-time="49.5h">49.5hrs ago</button>
+            <button class="time-button" data-time="50h">50hrs ago</button>
         </div>
     </div>
 
@@ -165,18 +165,18 @@
         function getDateFromTimeOffset(offset) {
             const now = new Date();
             switch(offset) {
-                case 'now':
-                    return now.toISOString();
-                case '1h':
-                    return new Date(now.getTime() - 1 * 60 * 60 * 1000).toISOString();
-                case '6h':
-                    return new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
-                case '1d':
-                    return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-                case '1w':
-                    return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+                case '48h':
+                    return new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+                case '48.5h':
+                    return new Date(now.getTime() - 48.5 * 60 * 60 * 1000).toISOString();
+                case '49h':
+                    return new Date(now.getTime() - 49 * 60 * 60 * 1000).toISOString();
+                case '49.5h':
+                    return new Date(now.getTime() - 49.5 * 60 * 60 * 1000).toISOString();
+                case '50h':
+                    return new Date(now.getTime() - 50 * 60 * 60 * 1000).toISOString();
                 default:
-                    return now.toISOString();
+                    return new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
             }
         }
         
@@ -194,7 +194,7 @@
                 img.style.opacity = '1';
             };
             
-            img.src = `/composite-image?compositeRadius=400&featherRadius=40&date=${encodeURIComponent(isoDate)}&t=${timestamp}`;
+            img.src = `/composite-image?compositeRadius=400&featherRadius=40&style=ad-astra&cropWidth=1440&cropHeight=1200&date=${encodeURIComponent(isoDate)}&t=${timestamp}`;
         }
         
         // Time button event handlers
@@ -212,13 +212,18 @@
             });
         });
         
-        // Auto-refresh only if on "Live" mode
-        setInterval(() => {
-            const activeButton = document.querySelector('.time-button.active');
-            if (activeButton && activeButton.getAttribute('data-time') === 'now') {
-                loadImageForTime('now');
-            }
-        }, 5 * 60 * 1000);
+        // Load initial image (48hrs ago)
+        window.addEventListener('load', () => {
+            loadImageForTime('48h');
+        });
+
+        // Auto-refresh disabled since we're using historical data
+        // setInterval(() => {
+        //     const activeButton = document.querySelector('.time-button.active');
+        //     if (activeButton && activeButton.getAttribute('data-time') === 'now') {
+        //         loadImageForTime('now');
+        //     }
+        // }, 5 * 60 * 1000);
     </script>
 </body>
 </html>
