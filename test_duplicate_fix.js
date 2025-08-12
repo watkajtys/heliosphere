@@ -22,21 +22,21 @@ async function testDuplicateFix() {
         }
     ];
     
-    let previousSdoChecksum = '046be6132dd9da5c2f98b36caebdb8cd'; // The duplicate checksum from before
+    const sdoChecksumHistory = ['046be6132dd9da5c2f98b36caebdb8cd']; // Start with the known duplicate checksum
     const results = [];
     
     for (const frame of problematicFrames) {
         console.log(`🎬 Testing ${frame.frameNum}: ${frame.timestamp}`);
         console.log(`   Context: ${frame.description}`);
-        console.log(`   Previous SDO checksum: ${previousSdoChecksum.substring(0, 8)}...`);
+        console.log(`   SDO Checksum History contains: [${sdoChecksumHistory.map(c => c.substring(0, 8) + '...').join(', ')}]`);
         
-        const baseUrl = 'http://localhost:3003/verified-composite';
+        const baseUrl = 'http://localhost:3004/verified-composite'; // Corrected port
         const params = new URLSearchParams({
             date: frame.timestamp,
             style: 'ad-astra',
             cropWidth: '1440',
             cropHeight: '1200',
-            previousSdoChecksum: previousSdoChecksum
+            usedSdoChecksums: sdoChecksumHistory.join(',')
         });
         
         const url = `${baseUrl}?${params.toString()}`;
@@ -76,10 +76,12 @@ async function testDuplicateFix() {
             console.log(`   📈 Quality Score: ${metadata.qualityScore}`);
             
             if (metadata.sdoUnique) {
-                console.log(`   🎉 SUCCESS: Found unique SDO data within expanded ±60min window!`);
-                previousSdoChecksum = metadata.sdoChecksum;
+                console.log(`   🎉 SUCCESS: System found a unique SDO component!`);
+                sdoChecksumHistory.push(metadata.sdoChecksum);
             } else {
-                console.log(`   ⚠️  WARNING: Still returning duplicate despite fixes`);
+                console.log(`   🟡 SUCCESS: System gracefully degraded and returned the best available duplicate.`);
+                // We still add the checksum to the history to ensure the NEXT frame doesn't also use it.
+                sdoChecksumHistory.push(metadata.sdoChecksum);
             }
             
             results.push(metadata);

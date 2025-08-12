@@ -95,8 +95,8 @@ function generateFrameTimestamps() {
     return timestamps;
 }
 
-// Enhanced frame generation with detailed logging
-async function generateFrameWithLogging(frameData, previousChecksums = {}, attempt = 1) {
+// Enhanced frame generation with detailed logging and full history
+async function generateFrameWithLogging(frameData, checksumHistories = { sdo: [], lasco: [] }, attempt = 1) {
     const { frameNum, timestamp } = frameData;
     const frameStartTime = Date.now();
     
@@ -112,13 +112,13 @@ async function generateFrameWithLogging(frameData, previousChecksums = {}, attem
         featherRadius: '40'
     });
     
-    // Add previous checksums if available
-    if (previousChecksums.sdo) {
-        params.set('previousSdoChecksum', previousChecksums.sdo);
-        logProgress(`   🔍 Previous SDO: ${previousChecksums.sdo.substring(0, 8)}...`);
+    // Add checksum histories if they are not empty
+    if (checksumHistories.sdo && checksumHistories.sdo.length > 0) {
+        params.set('usedSdoChecksums', checksumHistories.sdo.join(','));
+        logProgress(`   🔍 Avoiding ${checksumHistories.sdo.length} SDO checksums.`);
     }
-    if (previousChecksums.lasco) {
-        params.set('previousLascoChecksum', previousChecksums.lasco);
+    if (checksumHistories.lasco && checksumHistories.lasco.length > 0) {
+        params.set('usedLascoChecksums', checksumHistories.lasco.join(','));
     }
     
     const url = `${CONFIG.baseUrl}?${params.toString()}`;
@@ -288,16 +288,6 @@ async function generateFrameWithLogging(frameData, previousChecksums = {}, attem
     }
 }
 
-// Process frames in controlled batches
-async function processBatch(frameBatch, previousChecksums) {
-    const promises = frameBatch.map(frameData => 
-        generateFrameWithLogging(frameData, previousChecksums)
-    );
-    
-    const results = await Promise.all(promises);
-    return results.filter(result => result !== null);
-}
-
 // Main video generation function
 async function generateFullVideo() {
     // Initialize progress tracking
@@ -306,63 +296,52 @@ async function generateFullVideo() {
     logProgress('🎬 Full Solar Time-lapse Video Generation');
     logProgress('=========================================');
     
-    logProgress(`📊 Multi-Day Test Configuration:`);
-    logProgress(`   Frames: ${CONFIG.frameCount} (${CONFIG.frameCount * CONFIG.intervalMinutes / 60} hours = ${(CONFIG.frameCount * CONFIG.intervalMinutes / 60 / 24).toFixed(1)} days coverage)`);
+    logProgress(`📊 Configuration:`);
+    logProgress(`   Frames: ${CONFIG.frameCount}`);
     logProgress(`   Interval: ${CONFIG.intervalMinutes} minutes`);
     logProgress(`   Style: ${CONFIG.style}`);
     logProgress(`   Resolution: ${CONFIG.cropWidth}×${CONFIG.cropHeight}`);
-    logProgress(`   Concurrency: ${CONFIG.concurrency} parallel frames`);
-    logProgress(`   Time range: ${CONFIG.hoursBack} hours ago → ${CONFIG.hoursBack - CONFIG.frameCount * CONFIG.intervalMinutes / 60} hours ago`);
-    logProgress(`   Enhanced logging: Fallback tracking + search step details`);
+    logProgress(`   Concurrency: 1 (Sequential processing for checksum history)`);
     
     // Ensure output directory exists
     if (!fs.existsSync(CONFIG.outputDir)) {
         fs.mkdirSync(CONFIG.outputDir);
-        console.log(`📁 Created output directory: ${CONFIG.outputDir}`);
+        logProgress(`📁 Created output directory: ${CONFIG.outputDir}`);
     }
     
     // Generate frame timestamps
     const frameTimestamps = generateFrameTimestamps();
-    console.log(`🕐 Generated ${frameTimestamps.length} frame timestamps`);
-    console.log(`   First: ${frameTimestamps[0].timestamp}`);
-    console.log(`   Last: ${frameTimestamps[frameTimestamps.length - 1].timestamp}`);
+    logProgress(`🕐 Generated ${frameTimestamps.length} frame timestamps.`);
+    logProgress(`   First: ${frameTimestamps[0].timestamp}`);
+    logProgress(`   Last: ${frameTimestamps[frameTimestamps.length - 1].timestamp}`);
     console.log('');
     
-    // Process frames in batches
-    console.log('🚀 Starting frame generation...\n');
+    // Process frames sequentially to build checksum history
+    logProgress('🚀 Starting sequential frame generation...\n');
     
-    let previousChecksums = {};
     const allResults = [];
+    const sdoChecksumHistory = [];
+    const lascoChecksumHistory = [];
     
-    for (let i = 0; i < frameTimestamps.length; i += CONFIG.concurrency) {
-        const batch = frameTimestamps.slice(i, i + CONFIG.concurrency);
-        const batchNum = Math.floor(i / CONFIG.concurrency) + 1;
-        const totalBatches = Math.ceil(frameTimestamps.length / CONFIG.concurrency);
+    for (const frameData of frameTimestamps) {
+        const checksumHistories = {
+            sdo: sdoChecksumHistory,
+            lasco: lascoChecksumHistory
+        };
         
-        console.log(`📦 Batch ${batchNum}/${totalBatches} (Frames ${batch[0].frameNum}-${batch[batch.length - 1].frameNum})`);
+        const result = await generateFrameWithLogging(frameData, checksumHistories);
         
-        const batchResults = await processBatch(batch, previousChecksums);
-        allResults.push(...batchResults);
-        
-        // Update previous checksums for next batch (use last successful frame)
-        if (batchResults.length > 0) {
-            const lastFrame = batchResults[batchResults.length - 1];
-            previousChecksums = {
-                sdo: lastFrame.sdo.checksum,
-                lasco: lastFrame.lasco.checksum
-            };
+        if (result) {
+            allResults.push(result);
+            // Add the new, unique checksums to the history for the next frame
+            if (result.sdo && result.sdo.checksum) sdoChecksumHistory.push(result.sdo.checksum);
+            if (result.lasco && result.lasco.checksum) lascoChecksumHistory.push(result.lasco.checksum);
         }
         
-        // Progress update
-        const progress = ((i + batch.length) / frameTimestamps.length * 100).toFixed(1);
-        const eta = ((Date.now() - new Date(LOG.startTime).getTime()) / (i + batch.length)) * (frameTimestamps.length - i - batch.length);
-        console.log(`📈 Progress: ${progress}% | ETA: ${(eta / 60000).toFixed(1)}min | Success: ${allResults.length}/${i + batch.length}`);
+        const progress = (allResults.length / frameTimestamps.length * 100).toFixed(1);
+        const eta = allResults.length > 0 ? ((Date.now() - new Date(LOG.startTime).getTime()) / allResults.length) * (frameTimestamps.length - allResults.length) : 0;
+        logProgress(`📈 Progress: ${progress}% | ETA: ${(eta / 60000).toFixed(1)}min | Success: ${allResults.length}/${frameTimestamps.length}`);
         console.log('');
-        
-        // Small delay between batches to be kind to the server
-        if (i + CONFIG.concurrency < frameTimestamps.length) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
     }
     
     // Generate comprehensive report
