@@ -27,10 +27,22 @@
                 <label for="featherRadiusSlider">Feather Radius: <span id="featherRadiusValue" class="value-display">40</span>px</label>
                 <input type="range" id="featherRadiusSlider" class="slider" min="0" max="150" value="40" step="1">
             </div>
+            <div class="control-group">
+                <label for="brightnessSlider">Brightness: <span id="brightnessValue" class="value-display">1.0</span></label>
+                <input type="range" id="brightnessSlider" class="slider" min="0" max="2" value="1" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="saturationSlider">Saturation: <span id="saturationValue" class="value-display">1.0</span></label>
+                <input type="range" id="saturationSlider" class="slider" min="0" max="4" value="1" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="hueSlider">Hue: <span id="hueValue" class="value-display">0</span></label>
+                <input type="range" id="hueSlider" class="slider" min="0" max="360" value="0" step="1">
+            </div>
         </div>
 
         <div class="image-container">
-            <img id="compositeImg" src="/composite-image?compositeRadius=600&featherRadius=40" alt="Loading composite image...">
+            <img id="compositeImg" src="/composite-image?compositeRadius=600&featherRadius=40&brightness=1&saturation=1&hue=0" alt="Loading composite image...">
         </div>
     </div>
 
@@ -39,18 +51,30 @@
         const compositeRadiusValue = document.getElementById('compositeRadiusValue');
         const featherRadiusSlider = document.getElementById('featherRadiusSlider');
         const featherRadiusValue = document.getElementById('featherRadiusValue');
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        const brightnessValue = document.getElementById('brightnessValue');
+        const saturationSlider = document.getElementById('saturationSlider');
+        const saturationValue = document.getElementById('saturationValue');
+        const hueSlider = document.getElementById('hueSlider');
+        const hueValue = document.getElementById('hueValue');
         const compositeImg = document.getElementById('compositeImg');
 
         function updateImage() {
             const compositeRadius = compositeRadiusSlider.value;
             const featherRadius = featherRadiusSlider.value;
+            const brightness = brightnessSlider.value;
+            const saturation = saturationSlider.value;
+            const hue = hueSlider.value;
 
             compositeRadiusValue.textContent = compositeRadius;
             featherRadiusValue.textContent = featherRadius;
+            brightnessValue.textContent = parseFloat(brightness).toFixed(1);
+            saturationValue.textContent = parseFloat(saturation).toFixed(1);
+            hueValue.textContent = hue;
 
             // Add a timestamp to the URL to force the browser to reload the image
             const timestamp = Date.now();
-            compositeImg.src = `/composite-image?compositeRadius=${compositeRadius}&featherRadius=${featherRadius}&t=${timestamp}`;
+            compositeImg.src = `/composite-image?compositeRadius=${compositeRadius}&featherRadius=${featherRadius}&brightness=${brightness}&saturation=${saturation}&hue=${hue}&t=${timestamp}`;
         }
 
         // Update the text display in real-time as the slider moves
@@ -60,11 +84,23 @@
         featherRadiusSlider.addEventListener('input', () => {
             featherRadiusValue.textContent = featherRadiusSlider.value;
         });
+        brightnessSlider.addEventListener('input', () => {
+            brightnessValue.textContent = parseFloat(brightnessSlider.value).toFixed(1);
+        });
+        saturationSlider.addEventListener('input', () => {
+            saturationValue.textContent = parseFloat(saturationSlider.value).toFixed(1);
+        });
+        hueSlider.addEventListener('input', () => {
+            hueValue.textContent = hueSlider.value;
+        });
 
         // Update the image only when the user has finished changing the value (releases the slider)
         // This prevents sending too many requests to the server.
         compositeRadiusSlider.addEventListener('change', updateImage);
         featherRadiusSlider.addEventListener('change', updateImage);
+        brightnessSlider.addEventListener('change', updateImage);
+        saturationSlider.addEventListener('change', updateImage);
+        hueSlider.addEventListener('change', updateImage);
 
         // No need for an initial call to updateImage() since the <img> tag's src is already set with default values.
     </script>

@@ -113,6 +113,31 @@ async function applyCircularFeather(imageBuffer: Buffer, finalSize: number, comp
 
 
 /**
+ * Applies color grading to the sun disk image.
+ * @param imageBuffer The image to process.
+ * @param brightness The brightness multiplier.
+ * @param saturation The saturation multiplier.
+ * @param hue The hue rotation in degrees.
+ * @returns A promise that resolves to the processed image buffer.
+ */
+async function gradeSunDisk(
+	imageBuffer: Buffer,
+	brightness: number,
+	saturation: number,
+	hue: number
+): Promise<Buffer> {
+	const gradedImage = await sharp(imageBuffer)
+		.modulate({
+			brightness: brightness,
+			saturation: saturation,
+			hue: hue,
+		})
+		.toBuffer();
+	return gradedImage;
+}
+
+
+/**
  * Creates a composite image with a tuned sun disk.
  * @param isoDate The date of the image to fetch.
  * @param apiKey The NASA API key.
@@ -120,7 +145,15 @@ async function applyCircularFeather(imageBuffer: Buffer, finalSize: number, comp
  * @param featherRadius The radius to feather the sun disk edge.
  * @returns A promise that resolves to the composited image buffer.
  */
-async function createTunedCompositeImage(isoDate: string, apiKey: string, compositeRadius: number, featherRadius: number): Promise<Buffer> {
+async function createTunedCompositeImage(
+	isoDate: string,
+	apiKey: string,
+	compositeRadius: number,
+	featherRadius: number,
+	brightness: number,
+	saturation: number,
+	hue: number
+): Promise<Buffer> {
 	const width = 1920;
 	const height = 1200;
 
@@ -134,11 +167,14 @@ async function createTunedCompositeImage(isoDate: string, apiKey: string, compos
 
 	const [coronaImage, sunDiskImage] = await Promise.all([coronaImagePromise, sunDiskImagePromise]);
 
+	// Grade the sun disk image
+	const gradedSunDisk = await gradeSunDisk(sunDiskImage, brightness, saturation, hue);
+
 	// Fixed SDO size at 1435px
 	const sdoSize = 1435;
 	
 	// Apply the feathering to the sun disk image
-	const featheredSunDisk = await applyCircularFeather(sunDiskImage, sdoSize, compositeRadius, featherRadius);
+	const featheredSunDisk = await applyCircularFeather(gradedSunDisk, sdoSize, compositeRadius, featherRadius);
 
 	// Determine the final canvas size
 	const finalWidth = Math.max(width, sdoSize);
@@ -183,9 +219,20 @@ app.get('/composite-image', async (req, res) => {
 	const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
 	const compositeRadius = req.query.compositeRadius ? parseInt(req.query.compositeRadius as string) : 600;
 	const featherRadius = req.query.featherRadius ? parseInt(req.query.featherRadius as string) : 40;
+	const brightness = req.query.brightness ? parseFloat(req.query.brightness as string) : 1;
+	const saturation = req.query.saturation ? parseFloat(req.query.saturation as string) : 1;
+	const hue = req.query.hue ? parseInt(req.query.hue as string) : 0;
 
 	try {
-		const imageBuffer = await createTunedCompositeImage(isoDate, apiKey, compositeRadius, featherRadius);
+		const imageBuffer = await createTunedCompositeImage(
+			isoDate,
+			apiKey,
+			compositeRadius,
+			featherRadius,
+			brightness,
+			saturation,
+			hue
+		);
 		res.set('Content-Type', 'image/png');
 		res.send(imageBuffer);
 	} catch (error) {
