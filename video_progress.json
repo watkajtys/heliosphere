@@ -1,384 +1,90 @@
 {
   "status": "running",
   "progress": {
-    "current": 644,
-    "total": 3600
+    "current": 4,
+    "total": 4
   },
   "performance": {
-    "avgTime": 7.3364798136645994,
-    "totalTime": 4724.693000000002
+    "avgTime": 4.1335,
+    "totalTime": 16.534
   },
   "fallbacks": {
-    "count": 22,
-    "rate": 0.034161490683229816,
-    "details": [
-      {
-        "frameNum": "016",
-        "targetTimestamp": "2025-07-05T11:01:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-05T11:01:34.485Z",
-          "actualTime": "2025-07-05T11:16:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "112",
-        "targetTimestamp": "2025-07-06T11:01:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-06T11:01:34.485Z",
-          "actualTime": "2025-07-06T11:16:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "232",
-        "targetTimestamp": "2025-07-07T17:01:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-07T17:01:34.485Z",
-          "actualTime": "2025-07-07T17:16:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "239",
-        "targetTimestamp": "2025-07-07T18:46:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-07T18:46:34.485Z",
-          "actualTime": "2025-07-07T19:01:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "238",
-        "targetTimestamp": "2025-07-07T18:31:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-07T18:31:34.485Z",
-          "actualTime": "2025-07-07T19:01:34.485Z",
-          "timeDelta": 30,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "304",
-        "targetTimestamp": "2025-07-08T11:01:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-08T11:01:34.485Z",
-          "actualTime": "2025-07-08T11:16:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "351",
-        "targetTimestamp": "2025-07-08T22:46:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-08T22:46:34.485Z",
-          "actualTime": "2025-07-08T23:31:34.485Z",
-          "timeDelta": 45,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "350",
-        "targetTimestamp": "2025-07-08T22:31:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-08T22:31:34.485Z",
-          "actualTime": "2025-07-08T23:31:34.485Z",
-          "timeDelta": 60,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "349",
-        "targetTimestamp": "2025-07-08T22:16:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-08T22:16:34.485Z",
-          "actualTime": "2025-07-08T21:16:34.485Z",
-          "timeDelta": 60,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "354",
-        "targetTimestamp": "2025-07-08T23:31:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-08T23:31:34.485Z",
-          "actualTime": "2025-07-08T23:16:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "360",
-        "targetTimestamp": "2025-07-09T01:01:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-09T01:01:34.485Z",
-          "actualTime": "2025-07-09T01:31:34.485Z",
-          "timeDelta": 30,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "359",
-        "targetTimestamp": "2025-07-09T00:46:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-09T00:46:34.485Z",
-          "actualTime": "2025-07-09T01:31:34.485Z",
-          "timeDelta": 45,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "358",
-        "targetTimestamp": "2025-07-09T00:31:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-09T00:31:34.485Z",
-          "actualTime": "2025-07-09T01:31:34.485Z",
-          "timeDelta": 60,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "362",
-        "targetTimestamp": "2025-07-09T01:31:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-09T01:31:34.485Z",
-          "actualTime": "2025-07-09T01:46:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "379",
-        "targetTimestamp": "2025-07-09T05:46:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-09T05:46:34.485Z",
-          "actualTime": "2025-07-09T06:01:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "434",
-        "targetTimestamp": "2025-07-09T19:31:34.485Z",
-        "sdoFallback": {
-          "requestedTime": "2025-07-09T19:31:34.485Z",
-          "actualTime": "2025-07-09T19:43:34.485Z",
-          "timeDelta": 12,
-          "unique": true
-        },
-        "lascoFallback": null,
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "433",
-        "targetTimestamp": "2025-07-09T19:16:34.485Z",
-        "sdoFallback": {
-          "requestedTime": "2025-07-09T19:16:34.485Z",
-          "actualTime": "2025-07-09T19:40:34.485Z",
-          "timeDelta": 24,
-          "unique": true
-        },
-        "lascoFallback": null,
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "439",
-        "targetTimestamp": "2025-07-09T20:46:34.485Z",
-        "sdoFallback": {
-          "requestedTime": "2025-07-09T20:46:34.485Z",
-          "actualTime": "2025-07-09T20:58:34.485Z",
-          "timeDelta": 12,
-          "unique": true
-        },
-        "lascoFallback": null,
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "447",
-        "targetTimestamp": "2025-07-09T22:46:34.485Z",
-        "sdoFallback": {
-          "requestedTime": "2025-07-09T22:46:34.485Z",
-          "actualTime": "2025-07-09T22:34:34.485Z",
-          "timeDelta": 12,
-          "unique": true
-        },
-        "lascoFallback": null,
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "565",
-        "targetTimestamp": "2025-07-11T04:16:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-11T04:16:34.485Z",
-          "actualTime": "2025-07-11T04:31:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "577",
-        "targetTimestamp": "2025-07-11T07:16:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-11T07:16:34.485Z",
-          "actualTime": "2025-07-11T07:31:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      },
-      {
-        "frameNum": "592",
-        "targetTimestamp": "2025-07-11T11:01:34.485Z",
-        "sdoFallback": null,
-        "lascoFallback": {
-          "requestedTime": "2025-07-11T11:01:34.485Z",
-          "actualTime": "2025-07-11T11:16:34.485Z",
-          "timeDelta": 15,
-          "unique": true
-        },
-        "fallbackResolved": true
-      }
-    ]
+    "count": 0,
+    "rate": 0,
+    "details": []
   },
   "log": [
-    "[07:48:03] 🎬 Frame 662/3600: 2025-07-12T04:31:34.485Z ",
-    "[07:48:03]    🔍 Previous SDO: a571594e...",
-    "[07:48:03] 🎬 Frame 663/3600: 2025-07-12T04:46:34.485Z ",
-    "[07:48:03]    🔍 Previous SDO: a571594e...",
-    "[07:48:05] 🎬 Frame 661/3600: 2025-07-12T04:16:34.485Z (Retry 2)",
-    "[07:48:05]    🔍 Previous SDO: a571594e...",
-    "[07:48:05] 🎬 Frame 662/3600: 2025-07-12T04:31:34.485Z (Retry 2)",
-    "[07:48:05]    🔍 Previous SDO: a571594e...",
-    "[07:48:05] 🎬 Frame 663/3600: 2025-07-12T04:46:34.485Z (Retry 2)",
-    "[07:48:05]    🔍 Previous SDO: a571594e...",
-    "[07:48:06] 🎬 Frame 664/3600: 2025-07-12T05:01:34.485Z ",
-    "[07:48:06]    🔍 Previous SDO: a571594e...",
-    "[07:48:06] 🎬 Frame 665/3600: 2025-07-12T05:16:34.485Z ",
-    "[07:48:06]    🔍 Previous SDO: a571594e...",
-    "[07:48:06] 🎬 Frame 666/3600: 2025-07-12T05:31:34.485Z ",
-    "[07:48:06]    🔍 Previous SDO: a571594e...",
-    "[07:48:08] 🎬 Frame 664/3600: 2025-07-12T05:01:34.485Z (Retry 2)",
-    "[07:48:08]    🔍 Previous SDO: a571594e...",
-    "[07:48:08] 🎬 Frame 665/3600: 2025-07-12T05:16:34.485Z (Retry 2)",
-    "[07:48:08]    🔍 Previous SDO: a571594e...",
-    "[07:48:08] 🎬 Frame 666/3600: 2025-07-12T05:31:34.485Z (Retry 2)",
-    "[07:48:08]    🔍 Previous SDO: a571594e...",
-    "[07:48:09] 🎬 Frame 667/3600: 2025-07-12T05:46:34.485Z ",
-    "[07:48:09]    🔍 Previous SDO: a571594e...",
-    "[07:48:09] 🎬 Frame 668/3600: 2025-07-12T06:01:34.485Z ",
-    "[07:48:09]    🔍 Previous SDO: a571594e...",
-    "[07:48:09] 🎬 Frame 669/3600: 2025-07-12T06:16:34.485Z ",
-    "[07:48:09]    🔍 Previous SDO: a571594e...",
-    "[07:48:11] 🎬 Frame 667/3600: 2025-07-12T05:46:34.485Z (Retry 2)",
-    "[07:48:11]    🔍 Previous SDO: a571594e...",
-    "[07:48:11] 🎬 Frame 668/3600: 2025-07-12T06:01:34.485Z (Retry 2)",
-    "[07:48:11]    🔍 Previous SDO: a571594e...",
-    "[07:48:11] 🎬 Frame 669/3600: 2025-07-12T06:16:34.485Z (Retry 2)",
-    "[07:48:11]    🔍 Previous SDO: a571594e...",
-    "[07:48:12] 🎬 Frame 670/3600: 2025-07-12T06:31:34.485Z ",
-    "[07:48:12]    🔍 Previous SDO: a571594e...",
-    "[07:48:12] 🎬 Frame 671/3600: 2025-07-12T06:46:34.485Z ",
-    "[07:48:12]    🔍 Previous SDO: a571594e...",
-    "[07:48:12] 🎬 Frame 672/3600: 2025-07-12T07:01:34.485Z ",
-    "[07:48:12]    🔍 Previous SDO: a571594e...",
-    "[07:48:14] 🎬 Frame 670/3600: 2025-07-12T06:31:34.485Z (Retry 2)",
-    "[07:48:14]    🔍 Previous SDO: a571594e...",
-    "[07:48:14] 🎬 Frame 671/3600: 2025-07-12T06:46:34.485Z (Retry 2)",
-    "[07:48:14]    🔍 Previous SDO: a571594e...",
-    "[07:48:14] 🎬 Frame 672/3600: 2025-07-12T07:01:34.485Z (Retry 2)",
-    "[07:48:14]    🔍 Previous SDO: a571594e...",
-    "[07:48:15] 🎬 Frame 673/3600: 2025-07-12T07:16:34.485Z ",
-    "[07:48:15]    🔍 Previous SDO: a571594e...",
-    "[07:48:15] 🎬 Frame 674/3600: 2025-07-12T07:31:34.485Z ",
-    "[07:48:15]    🔍 Previous SDO: a571594e...",
-    "[07:48:15] 🎬 Frame 675/3600: 2025-07-12T07:46:34.485Z ",
-    "[07:48:15]    🔍 Previous SDO: a571594e...",
-    "[07:48:17] 🎬 Frame 673/3600: 2025-07-12T07:16:34.485Z (Retry 2)",
-    "[07:48:17]    🔍 Previous SDO: a571594e...",
-    "[07:48:17] 🎬 Frame 674/3600: 2025-07-12T07:31:34.485Z (Retry 2)",
-    "[07:48:17]    🔍 Previous SDO: a571594e...",
-    "[07:48:17] 🎬 Frame 675/3600: 2025-07-12T07:46:34.485Z (Retry 2)",
-    "[07:48:17]    🔍 Previous SDO: a571594e...",
-    "[07:48:18] 🎬 Frame 676/3600: 2025-07-12T08:01:34.485Z ",
-    "[07:48:18]    🔍 Previous SDO: a571594e...",
-    "[07:48:18] 🎬 Frame 677/3600: 2025-07-12T08:16:34.485Z ",
-    "[07:48:18]    🔍 Previous SDO: a571594e...",
-    "[07:48:18] 🎬 Frame 678/3600: 2025-07-12T08:31:34.485Z ",
-    "[07:48:18]    🔍 Previous SDO: a571594e...",
-    "[07:48:20] 🎬 Frame 676/3600: 2025-07-12T08:01:34.485Z (Retry 2)",
-    "[07:48:20]    🔍 Previous SDO: a571594e...",
-    "[07:48:20] 🎬 Frame 677/3600: 2025-07-12T08:16:34.485Z (Retry 2)",
-    "[07:48:20]    🔍 Previous SDO: a571594e...",
-    "[07:48:20] 🎬 Frame 678/3600: 2025-07-12T08:31:34.485Z (Retry 2)",
-    "[07:48:20]    🔍 Previous SDO: a571594e...",
-    "[07:48:21] 🎬 Frame 679/3600: 2025-07-12T08:46:34.485Z ",
-    "[07:48:21]    🔍 Previous SDO: a571594e...",
-    "[07:48:21] 🎬 Frame 680/3600: 2025-07-12T09:01:34.485Z ",
-    "[07:48:21]    🔍 Previous SDO: a571594e...",
-    "[07:48:21] 🎬 Frame 681/3600: 2025-07-12T09:16:34.485Z ",
-    "[07:48:21]    🔍 Previous SDO: a571594e...",
-    "[07:48:23] 🎬 Frame 679/3600: 2025-07-12T08:46:34.485Z (Retry 2)",
-    "[07:48:23]    🔍 Previous SDO: a571594e...",
-    "[07:48:23] 🎬 Frame 680/3600: 2025-07-12T09:01:34.485Z (Retry 2)",
-    "[07:48:23]    🔍 Previous SDO: a571594e...",
-    "[07:48:23] 🎬 Frame 681/3600: 2025-07-12T09:16:34.485Z (Retry 2)",
-    "[07:48:23]    🔍 Previous SDO: a571594e...",
-    "[07:48:24] 🎬 Frame 682/3600: 2025-07-12T09:31:34.485Z ",
-    "[07:48:24]    🔍 Previous SDO: a571594e...",
-    "[07:48:24] 🎬 Frame 683/3600: 2025-07-12T09:46:34.485Z ",
-    "[07:48:24]    🔍 Previous SDO: a571594e...",
-    "[07:48:24] 🎬 Frame 684/3600: 2025-07-12T10:01:34.485Z ",
-    "[07:48:24]    🔍 Previous SDO: a571594e...",
-    "[07:48:26] 🎬 Frame 682/3600: 2025-07-12T09:31:34.485Z (Retry 2)",
-    "[07:48:26]    🔍 Previous SDO: a571594e...",
-    "[07:48:26] 🎬 Frame 683/3600: 2025-07-12T09:46:34.485Z (Retry 2)",
-    "[07:48:26]    🔍 Previous SDO: a571594e...",
-    "[07:48:26] 🎬 Frame 684/3600: 2025-07-12T10:01:34.485Z (Retry 2)",
-    "[07:48:26]    🔍 Previous SDO: a571594e...",
-    "[07:48:27] 🎬 Frame 685/3600: 2025-07-12T10:16:34.485Z ",
-    "[07:48:27]    🔍 Previous SDO: a571594e...",
-    "[07:48:27] 🎬 Frame 686/3600: 2025-07-12T10:31:34.485Z ",
-    "[07:48:27]    🔍 Previous SDO: a571594e...",
-    "[07:48:27] 🎬 Frame 687/3600: 2025-07-12T10:46:34.485Z ",
-    "[07:48:27]    🔍 Previous SDO: a571594e..."
+    "[21:43:35] 🎬 Full Solar Time-lapse Video Generation",
+    "[21:43:35] =========================================",
+    "[21:43:35] 📊 Configuration:",
+    "[21:43:35]    Frames: 4",
+    "[21:43:35]    Interval: 30 minutes",
+    "[21:43:35]    Style: ad-astra",
+    "[21:43:35]    Resolution: 1440×1200",
+    "[21:43:35]    Concurrency: 1 (Sequential processing for checksum history)",
+    "[21:43:35] 🕐 Generated 4 frame timestamps.",
+    "[21:43:35]    First: 2025-08-10T21:43:35.375Z",
+    "[21:43:35]    Last: 2025-08-10T23:13:35.375Z",
+    "[21:43:35] 🚀 Starting sequential frame generation...\n",
+    "[21:43:35] 🎬 Frame 001/4: 2025-08-10T21:43:35.375Z ",
+    "[21:43:35]    ⚠️ TEST MODE: Loaded base frames from video_generation_log.MANUAL.json",
+    "[21:43:35] 🎬 Starting Frame Interpolation Stage",
+    "[21:43:35] ====================================",
+    "[21:43:35]    🗑️ Clearing existing interpolated frames directory: interpolated_frames",
+    "[21:43:35]    📁 Created new output directory: interpolated_frames",
+    "[21:43:35]    ➡️ Copied base frame frame_001.png to frame_0001.png",
+    "[21:43:35]    🔄 Interpolating between frame_001.png and frame_002.png",
+    "[21:43:35]       ✨ Generated and saved interpolated frame: frame_0002.png",
+    "[21:43:35]    ➡️ Copied base frame frame_002.png to frame_0003.png",
+    "[21:43:35]    🔄 Interpolating between frame_002.png and frame_003.png",
+    "[21:43:36]       ✨ Generated and saved interpolated frame: frame_0004.png",
+    "[21:43:36]    ➡️ Copied base frame frame_003.png to frame_0005.png",
+    "[21:43:36]    🔄 Interpolating between frame_003.png and frame_004.png",
+    "[21:43:36]       ✨ Generated and saved interpolated frame: frame_0006.png",
+    "[21:43:36]    ➡️ Copied base frame frame_004.png to frame_0007.png",
+    "[21:43:36] \n✅ Interpolation complete. Total frames: 7",
+    "[21:43:39]    ✅ Saved: test_frames/frame_001.png (1.54MB)",
+    "[21:43:39]    🌅 SDO: 2025-08-10T21:43:35.375Z → a4dfdc64... ✅ (exact_match)",
+    "[21:43:39]    🌙 LASCO: 2025-08-10T21:43:35.375Z → 4a8c6d14... ✅ (exact_match)",
+    "[21:43:39]    📈 Quality: 1 | Processing: 4.3s | API: 4240ms",
+    "[21:43:39] 📈 Progress: 25.0% | ETA: 0.2min | Success: 1/4",
+    "[21:43:39] 🎬 Frame 002/4: 2025-08-10T22:13:35.375Z ",
+    "[21:43:39]    🔍 Avoiding 1 SDO checksums.",
+    "[21:43:43]    ✅ Saved: test_frames/frame_002.png (1.54MB)",
+    "[21:43:43]    🌅 SDO: 2025-08-10T22:13:35.375Z → 30dd26a9... ✅ (exact_match)",
+    "[21:43:43]    🌙 LASCO: 2025-08-10T22:13:35.375Z → 5f7e2562... ✅ (exact_match)",
+    "[21:43:43]    📈 Quality: 1 | Processing: 4.1s | API: 4050ms",
+    "[21:43:43] 📈 Progress: 50.0% | ETA: 0.1min | Success: 2/4",
+    "[21:43:43] 🎬 Frame 003/4: 2025-08-10T22:43:35.375Z ",
+    "[21:43:43]    🔍 Avoiding 2 SDO checksums.",
+    "[21:43:47]    ✅ Saved: test_frames/frame_003.png (1.54MB)",
+    "[21:43:47]    🌅 SDO: 2025-08-10T22:43:35.375Z → 2fd29700... ✅ (exact_match)",
+    "[21:43:47]    🌙 LASCO: 2025-08-10T22:43:35.375Z → 8d131c60... ✅ (exact_match)",
+    "[21:43:47]    📈 Quality: 1 | Processing: 4.1s | API: 4063ms",
+    "[21:43:47] 📈 Progress: 75.0% | ETA: 0.1min | Success: 3/4",
+    "[21:43:47] 🎬 Frame 004/4: 2025-08-10T23:13:35.375Z ",
+    "[21:43:47]    🔍 Avoiding 3 SDO checksums.",
+    "[21:43:51]    ✅ Saved: test_frames/frame_004.png (1.54MB)",
+    "[21:43:51]    🌅 SDO: 2025-08-10T23:13:35.375Z → 07db4c62... ✅ (exact_match)",
+    "[21:43:51]    🌙 LASCO: 2025-08-10T23:13:35.375Z → 73f8892f... ✅ (exact_match)",
+    "[21:43:51]    📈 Quality: 1 | Processing: 4.1s | API: 4117ms",
+    "[21:43:51] 📈 Progress: 100.0% | ETA: 0.0min | Success: 4/4",
+    "[21:43:51]    ⚠️ TEST MODE: Loaded base frames from video_generation_log.MANUAL.json",
+    "[21:43:51] 🎬 Starting Frame Interpolation Stage",
+    "[21:43:51] ====================================",
+    "[21:43:51]    🗑️ Clearing existing interpolated frames directory: interpolated_frames",
+    "[21:43:51]    📁 Created new output directory: interpolated_frames",
+    "[21:43:51]    ➡️ Copied base frame frame_001.png to frame_0001.png",
+    "[21:43:51]    🔄 Interpolating between frame_001.png and frame_002.png",
+    "[21:43:52]       ✨ Generated and saved interpolated frame: frame_0002.png",
+    "[21:43:52]    ➡️ Copied base frame frame_002.png to frame_0003.png",
+    "[21:43:52]    🔄 Interpolating between frame_002.png and frame_003.png",
+    "[21:43:52]       ✨ Generated and saved interpolated frame: frame_0004.png",
+    "[21:43:52]    ➡️ Copied base frame frame_003.png to frame_0005.png",
+    "[21:43:52]    🔄 Interpolating between frame_003.png and frame_004.png",
+    "[21:43:52]       ✨ Generated and saved interpolated frame: frame_0006.png",
+    "[21:43:52]    ➡️ Copied base frame frame_004.png to frame_0007.png",
+    "[21:43:52] \n✅ Interpolation complete. Total frames: 7"
   ],
-  "lastUpdate": "2025-08-12T07:48:27.572Z"
+  "lastUpdate": "2025-08-12T21:43:52.906Z"
 }

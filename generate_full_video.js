@@ -2,11 +2,14 @@
 
 import crypto from 'crypto';
 import fs from 'fs';
+import path from 'path';
 
 /**
  * Comprehensive Solar Time-lapse Video Generator
  * Generates full 24-hour video with detailed logging of smart fallback system
  */
+
+import { blendFrames } from './frame-interpolation/index.js';
 
 // Configuration - Optimized 12-minute intervals (2.5 minute video)
 const CONFIG = {
@@ -15,6 +18,8 @@ const CONFIG = {
     hoursBack: 744,             // Start 31 days ago (744 hours for stable data)
     baseUrl: 'http://localhost:3004/verified-composite',
     outputDir: 'optimized_12min_frames',
+    interpolatedOutputDir: 'interpolated_frames', // Directory for final, interpolated frames
+    interpolationFactor: 2,      // 2x interpolation (1 intermediate frame)
     style: 'ad-astra',
     cropWidth: 1440,
     cropHeight: 1200,
@@ -256,8 +261,8 @@ async function generateFrameWithLogging(frameData, checksumHistories = { sdo: []
         
         // Log frame results  
         logProgress(`   ✅ Saved: ${filename} (${(frameMetadata.performance.fileSize / 1024 / 1024).toFixed(2)}MB)`);
-        logProgress(`   🌅 SDO: ${frameMetadata.sdo.actualDate} → ${frameMetadata.sdo.checksum.substring(0, 8)}... ${frameMetadata.sdo.unique ? '✅' : '⚠️'} (${frameMetadata.sdo.searchType})`);
-        logProgress(`   🌙 LASCO: ${frameMetadata.lasco.actualDate} → ${frameMetadata.lasco.checksum.substring(0, 8)}... ${frameMetadata.lasco.unique ? '✅' : '⚠️'} (${frameMetadata.lasco.searchType})`);
+        logProgress(`   🌅 SDO: ${frameMetadata.sdo.actualDate} → ${(frameMetadata.sdo.checksum || 'N/A').substring(0, 8)}... ${frameMetadata.sdo.unique ? '✅' : '⚠️'} (${frameMetadata.sdo.searchType})`);
+        logProgress(`   🌙 LASCO: ${frameMetadata.lasco.actualDate} → ${(frameMetadata.lasco.checksum || 'N/A').substring(0, 8)}... ${frameMetadata.lasco.unique ? '✅' : '⚠️'} (${frameMetadata.lasco.searchType})`);
         logProgress(`   📈 Quality: ${frameMetadata.quality.score} | Processing: ${processingTime.toFixed(1)}s | API: ${apiDuration}ms`);
         
         // Update progress tracking
@@ -279,7 +284,7 @@ async function generateFrameWithLogging(frameData, checksumHistories = { sdo: []
         if (attempt < CONFIG.retryAttempts) {
             console.log(`   🔄 Retrying in 2 seconds... (${attempt}/${CONFIG.retryAttempts})`);
             await new Promise(resolve => setTimeout(resolve, 2000));
-            return generateFrameWithLogging(frameData, previousChecksums, attempt + 1);
+            return generateFrameWithLogging(frameData, checksumHistories, attempt + 1);
         }
         
         console.log(`   💀 Frame ${frameNum} failed after ${CONFIG.retryAttempts} attempts`);
@@ -287,6 +292,73 @@ async function generateFrameWithLogging(frameData, checksumHistories = { sdo: []
         return null;
     }
 }
+
+
+// New: Stage for handling frame interpolation
+async function runInterpolationStage(baseFrames, logData) {
+    logProgress('🎬 Starting Frame Interpolation Stage');
+    logProgress('====================================');
+
+    if (!CONFIG.interpolationFactor || CONFIG.interpolationFactor <= 1) {
+        logProgress('   ⏩ Interpolation factor is <= 1, skipping this stage.');
+        return baseFrames.map(f => path.join(CONFIG.outputDir, f.technical.filename));
+    }
+
+    const outputDir = CONFIG.interpolatedOutputDir;
+    if (fs.existsSync(outputDir)) {
+        logProgress(`   🗑️ Clearing existing interpolated frames directory: ${outputDir}`);
+        fs.rmSync(outputDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(outputDir, { recursive: true });
+    logProgress(`   📁 Created new output directory: ${outputDir}`);
+
+    const finalFrames = [];
+    let finalFrameCounter = 1;
+
+    for (let i = 0; i < baseFrames.length; i++) {
+        const currentFrameInfo = baseFrames[i];
+        const currentFramePath = currentFrameInfo.technical.filename;
+
+        // 1. Copy the base frame to the new directory
+        const newBasePath = path.join(outputDir, `frame_${String(finalFrameCounter++).padStart(4, '0')}.png`);
+        fs.copyFileSync(currentFramePath, newBasePath);
+        finalFrames.push(newBasePath);
+        logProgress(`   ➡️ Copied base frame ${path.basename(currentFramePath)} to ${path.basename(newBasePath)}`);
+
+        // 2. Interpolate if there is a next frame
+        if (i < baseFrames.length - 1) {
+            const nextFrameInfo = baseFrames[i + 1];
+            const nextFramePath = nextFrameInfo.technical.filename;
+
+            logProgress(`   🔄 Interpolating between ${path.basename(currentFramePath)} and ${path.basename(nextFramePath)}`);
+
+            // Solar-Physics-Aware Logic: Check for fallbacks before interpolating
+            const fallbackUsed = currentFrameInfo.quality.fallbackUsed || nextFrameInfo.quality.fallbackUsed;
+
+            if (fallbackUsed) {
+                logProgress(`   ⚠️  Skipping interpolation between ${path.basename(currentFramePath)} and ${path.basename(nextFramePath)} due to fallback data usage.`);
+            } else {
+                try {
+                    const interpolatedPaths = await blendFrames(currentFramePath, nextFramePath, CONFIG.interpolationFactor, outputDir);
+
+                    // Rename and move interpolated frames to their final sequential position
+                    for (const interpPath of interpolatedPaths) {
+                        const finalInterpPath = path.join(outputDir, `frame_${String(finalFrameCounter++).padStart(4, '0')}.png`);
+                        fs.renameSync(interpPath, finalInterpPath);
+                        finalFrames.push(finalInterpPath);
+                        logProgress(`      ✨ Generated and saved interpolated frame: ${path.basename(finalInterpPath)}`);
+                    }
+                } catch (error) {
+                    logProgress(`      ❌ Error interpolating frames: ${error.message}. Skipping pair.`);
+                }
+            }
+        }
+    }
+
+    logProgress(`\n✅ Interpolation complete. Total frames: ${finalFrames.length}`);
+    return finalFrames;
+}
+
 
 // Main video generation function
 async function generateFullVideo() {
@@ -378,64 +450,34 @@ async function generateFullVideo() {
     console.log(`   Retries required: ${LOG.summary.retries}`);
     console.log('');
     
-    // Detailed fallback analysis
-    if (PROGRESS.fallbacks.details.length > 0) {
-        console.log(`⚠️  Detailed Fallback Analysis:`);
-        console.log(`   Total fallbacks detected: ${PROGRESS.fallbacks.details.length}`);
-        
-        const sdoFallbacks = PROGRESS.fallbacks.details.filter(f => f.sdoFallback);
-        const lascoFallbacks = PROGRESS.fallbacks.details.filter(f => f.lascoFallback);
-        const resolvedFallbacks = PROGRESS.fallbacks.details.filter(f => f.fallbackResolved);
-        
-        console.log(`   SDO fallbacks: ${sdoFallbacks.length}`);
-        console.log(`   LASCO fallbacks: ${lascoFallbacks.length}`);
-        console.log(`   Successfully resolved: ${resolvedFallbacks.length}/${PROGRESS.fallbacks.details.length} (${(resolvedFallbacks.length / PROGRESS.fallbacks.details.length * 100).toFixed(1)}%)`);
-        
-        // Show each fallback in detail
-        PROGRESS.fallbacks.details.forEach((fallback, index) => {
-            console.log(`   \n   Fallback ${index + 1} - Frame ${fallback.frameNum}:`);
-            console.log(`     Target: ${fallback.targetTimestamp}`);
-            if (fallback.sdoFallback) {
-                console.log(`     🌅 SDO: ${fallback.sdoFallback.actualTime} (Δ${fallback.sdoFallback.timeDelta.toFixed(1)}min) ${fallback.sdoFallback.unique ? '✅' : '❌'}`);
-            }
-            if (fallback.lascoFallback) {
-                console.log(`     🌙 LASCO: ${fallback.lascoFallback.actualTime} (Δ${fallback.lascoFallback.timeDelta.toFixed(1)}min) ${fallback.lascoFallback.unique ? '✅' : '❌'}`);
-            }
-            console.log(`     🎯 Resolution: ${fallback.fallbackResolved ? 'SUCCESS' : 'PARTIAL'}`);
-        });
-        console.log('');
-    } else {
-        console.log(`✅ Perfect Data Availability - No fallbacks needed!`);
-        console.log('');
-    }
-    
-    console.log(`⚡ Performance Metrics:`);
-    console.log(`   Total API calls: ${LOG.summary.totalApiCalls}`);
-    console.log(`   Avg processing time: ${LOG.summary.avgProcessingTime.toFixed(1)}s per frame`);
-    console.log(`   Total processing time: ${(LOG.summary.totalProcessingTime / 60).toFixed(1)} minutes`);
-    console.log('');
-    
-    console.log(`💾 Output Files:`);
-    console.log(`   Frames: ${CONFIG.outputDir}/frame_*.png (${LOG.summary.successfulFrames} files)`);
-    console.log(`   Detailed log: video_generation_log.json`);
-    console.log('');
-    
+    // New: Run the interpolation stage
+    const finalFrameFiles = await runInterpolationStage(allResults, LOG);
+
+
     // Video encoding instructions
-    if (LOG.summary.successfulFrames >= 24) {
+    if (finalFrameFiles.length > 0) {
+        const finalOutputDir = CONFIG.interpolationFactor > 1 ? CONFIG.interpolatedOutputDir : CONFIG.outputDir;
+        // Base framerate is 24, multiplied by interpolation factor.
+        // If factor is 2, we get 1 intermediate frame, so we have 2x the frames, needing 2x the framerate.
+        const finalFrameRate = 24 * CONFIG.interpolationFactor;
+
         console.log(`🎬 Ready for Video Encoding!`);
         console.log(`   Recommended FFmpeg command:`);
-        console.log(`   ffmpeg -framerate 24 -i ${CONFIG.outputDir}/frame_%03d.png -c:v libx264 -pix_fmt yuv420p -y solar_timelapse_24hr.mp4`);
+        // Use a 4-digit padded number for the frame sequence to support >999 frames
+        console.log(`   ffmpeg -framerate ${finalFrameRate} -i ${finalOutputDir}/frame_%04d.png -c:v libx264 -pix_fmt yuv420p -y solar_timelapse_final.mp4`);
         console.log('');
         
-        const videoDuration = LOG.summary.successfulFrames / 24;
+        const videoDuration = finalFrameFiles.length / finalFrameRate;
         console.log(`📹 Expected video duration: ${videoDuration.toFixed(1)} seconds`);
         console.log(`   Covering ${(LOG.summary.successfulFrames * CONFIG.intervalMinutes / 60).toFixed(1)} hours of solar activity`);
+
     } else {
-        console.log(`⚠️  Only ${LOG.summary.successfulFrames} frames generated - need at least 24 for smooth video`);
+        console.log(`⚠️  Not enough frames generated to create a video.`);
     }
-    
+
     return LOG;
 }
+
 
 // Self-executing async function
 (async () => {
