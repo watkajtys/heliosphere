@@ -1,18 +1,18 @@
 {
-  "startTime": "2025-08-12T21:43:35.370Z",
+  "startTime": "2025-08-12T15:58:14.800Z",
   "frames": [
     {
       "frameNum": "001",
-      "targetTimestamp": "2025-08-10T21:43:35.375Z",
+      "targetTimestamp": "2025-07-12T15:58:14.807Z",
       "sdo": {
-        "actualDate": "2025-08-10T21:43:35.375Z",
-        "checksum": "a4dfdc64b4469d4a94e59e982693ba03",
+        "actualDate": "2025-07-12T15:58:14.807Z",
+        "checksum": "3c0f200a0bba6f1740424c1c27d5c212",
         "unique": true,
         "searchType": "exact_match"
       },
       "lasco": {
-        "actualDate": "2025-08-10T21:43:35.375Z",
-        "checksum": "4a8c6d14e552f65a4703dc41450a700d",
+        "actualDate": "2025-07-12T15:58:14.807Z",
+        "checksum": "e9745a1e13be6018df22034082b20eea",
         "unique": true,
         "searchType": "exact_match"
       },
@@ -22,30 +22,30 @@
         "fallbackUsed": false
       },
       "performance": {
-        "apiResponseTime": 4240,
-        "totalProcessingTime": 4.26,
-        "fileSize": 1613017,
+        "apiResponseTime": 4698,
+        "totalProcessingTime": 4.775,
+        "fileSize": 1571720,
         "retryAttempt": 1
       },
       "technical": {
-        "filename": "test_frames/frame_001.png",
-        "compositeChecksum": "992e53af180d771fb1bb890365a086af",
-        "url": "http://localhost:3002/verified-composite?date=2025-08-10T21%3A43%3A35.375Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40",
-        "requestTime": "2025-08-12T21:43:35.377Z"
+        "filename": "optimized_12min_frames/frame_001_source.png",
+        "compositeChecksum": "180c2ce32e6da051d4cedf49c94c05f9",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T15%3A58%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40",
+        "requestTime": "2025-08-12T15:58:14.808Z"
       }
     },
     {
       "frameNum": "002",
-      "targetTimestamp": "2025-08-10T22:13:35.375Z",
+      "targetTimestamp": "2025-07-12T16:10:14.807Z",
       "sdo": {
-        "actualDate": "2025-08-10T22:13:35.375Z",
-        "checksum": "30dd26a9ab74ccc6097fefc94dd42d3f",
+        "actualDate": "2025-07-12T16:10:14.807Z",
+        "checksum": "244e2fe004ba77fc1b3c9449216362a7",
         "unique": true,
         "searchType": "exact_match"
       },
       "lasco": {
-        "actualDate": "2025-08-10T22:13:35.375Z",
-        "checksum": "5f7e25626ca8baa748ccfdee8df825a2",
+        "actualDate": "2025-07-12T16:10:14.807Z",
+        "checksum": "9e189ec8cb8dd96ec08feccba4689767",
         "unique": true,
         "searchType": "exact_match"
       },
@@ -55,30 +55,30 @@
         "fallbackUsed": false
       },
       "performance": {
-        "apiResponseTime": 4050,
-        "totalProcessingTime": 4.07,
-        "fileSize": 1613486,
+        "apiResponseTime": 5114,
+        "totalProcessingTime": 5.13,
+        "fileSize": 1576991,
         "retryAttempt": 1
       },
       "technical": {
-        "filename": "test_frames/frame_002.png",
-        "compositeChecksum": "2ceba71d22da43629af8e213fb36c45a",
-        "url": "http://localhost:3002/verified-composite?date=2025-08-10T22%3A13%3A35.375Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&usedSdoChecksums=a4dfdc64b4469d4a94e59e982693ba03&usedLascoChecksums=4a8c6d14e552f65a4703dc41450a700d",
-        "requestTime": "2025-08-12T21:43:39.645Z"
+        "filename": "optimized_12min_frames/frame_002_source.png",
+        "compositeChecksum": "fd31696fcdb815cf1598dffbafba92b6",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T16%3A10%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40",
+        "requestTime": "2025-08-12T15:58:14.853Z"
       }
     },
     {
       "frameNum": "003",
-      "targetTimestamp": "2025-08-10T22:43:35.375Z",
+      "targetTimestamp": "2025-07-12T16:22:14.807Z",
       "sdo": {
-        "actualDate": "2025-08-10T22:43:35.375Z",
-        "checksum": "2fd297009ec2d4e4bdc78afe0f52f542",
+        "actualDate": "2025-07-12T16:22:14.807Z",
+        "checksum": "602d53c1342fe8c8ce78cb91bf3aea36",
         "unique": true,
         "searchType": "exact_match"
       },
       "lasco": {
-        "actualDate": "2025-08-10T22:43:35.375Z",
-        "checksum": "8d131c60b3103cb45c598e6021e32d16",
+        "actualDate": "2025-07-12T16:22:14.807Z",
+        "checksum": "94733fd6b9a809f887f24ee893eef6b3",
         "unique": true,
         "searchType": "exact_match"
       },
@@ -88,30 +88,30 @@
         "fallbackUsed": false
       },
       "performance": {
-        "apiResponseTime": 4063,
-        "totalProcessingTime": 4.073,
-        "fileSize": 1616318,
+        "apiResponseTime": 5032,
+        "totalProcessingTime": 5.048,
+        "fileSize": 1580145,
         "retryAttempt": 1
       },
       "technical": {
-        "filename": "test_frames/frame_003.png",
-        "compositeChecksum": "e2a28b35bb88536afeece5cb0ec92535",
-        "url": "http://localhost:3002/verified-composite?date=2025-08-10T22%3A43%3A35.375Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&usedSdoChecksums=a4dfdc64b4469d4a94e59e982693ba03%2C30dd26a9ab74ccc6097fefc94dd42d3f&usedLascoChecksums=4a8c6d14e552f65a4703dc41450a700d%2C5f7e25626ca8baa748ccfdee8df825a2",
-        "requestTime": "2025-08-12T21:43:43.721Z"
+        "filename": "optimized_12min_frames/frame_003_source.png",
+        "compositeChecksum": "9ad5798a77925b79ffffb010591c8910",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T16%3A22%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40",
+        "requestTime": "2025-08-12T15:58:14.855Z"
       }
     },
     {
       "frameNum": "004",
-      "targetTimestamp": "2025-08-10T23:13:35.375Z",
+      "targetTimestamp": "2025-07-12T16:34:14.807Z",
       "sdo": {
-        "actualDate": "2025-08-10T23:13:35.375Z",
-        "checksum": "07db4c621c9c0d29e4596eff36b38d27",
+        "actualDate": "2025-07-12T16:34:14.807Z",
+        "checksum": "ddb9badf3145c1eb9e58ab5eb16c95a3",
         "unique": true,
         "searchType": "exact_match"
       },
       "lasco": {
-        "actualDate": "2025-08-10T23:13:35.375Z",
-        "checksum": "73f8892f94c2c1bc9574bccb7286a159",
+        "actualDate": "2025-07-12T16:34:14.807Z",
+        "checksum": "8279a68133cd4e80108d7fca542dcf0e",
         "unique": true,
         "searchType": "exact_match"
       },
@@ -121,32 +121,231 @@
         "fallbackUsed": false
       },
       "performance": {
-        "apiResponseTime": 4117,
-        "totalProcessingTime": 4.131,
-        "fileSize": 1611764,
+        "apiResponseTime": 6061,
+        "totalProcessingTime": 6.077,
+        "fileSize": 1579969,
         "retryAttempt": 1
       },
       "technical": {
-        "filename": "test_frames/frame_004.png",
-        "compositeChecksum": "918f53e08fbb2b9d7a72f66f53304750",
-        "url": "http://localhost:3002/verified-composite?date=2025-08-10T23%3A13%3A35.375Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&usedSdoChecksums=a4dfdc64b4469d4a94e59e982693ba03%2C30dd26a9ab74ccc6097fefc94dd42d3f%2C2fd297009ec2d4e4bdc78afe0f52f542&usedLascoChecksums=4a8c6d14e552f65a4703dc41450a700d%2C5f7e25626ca8baa748ccfdee8df825a2%2C8d131c60b3103cb45c598e6021e32d16",
-        "requestTime": "2025-08-12T21:43:47.799Z"
+        "filename": "optimized_12min_frames/frame_004_source.png",
+        "compositeChecksum": "321b57143317eb136c7b9a47fe3b1aa8",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T16%3A34%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=602d53c1342fe8c8ce78cb91bf3aea36&previousLascoChecksum=94733fd6b9a809f887f24ee893eef6b3",
+        "requestTime": "2025-08-12T15:58:25.897Z"
+      }
+    },
+    {
+      "frameNum": "005",
+      "targetTimestamp": "2025-07-12T16:46:14.807Z",
+      "sdo": {
+        "actualDate": "2025-07-12T16:46:14.807Z",
+        "checksum": "f69317bd5d85d1be846d4e933d253875",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "lasco": {
+        "actualDate": "2025-07-12T16:46:14.807Z",
+        "checksum": "8279a68133cd4e80108d7fca542dcf0e",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "quality": {
+        "score": 1,
+        "bothUnique": true,
+        "fallbackUsed": false
+      },
+      "performance": {
+        "apiResponseTime": 5703,
+        "totalProcessingTime": 5.734,
+        "fileSize": 1579710,
+        "retryAttempt": 1
+      },
+      "technical": {
+        "filename": "optimized_12min_frames/frame_005_source.png",
+        "compositeChecksum": "990708a4c72845e27880eed5f667d4f7",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T16%3A46%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=602d53c1342fe8c8ce78cb91bf3aea36&previousLascoChecksum=94733fd6b9a809f887f24ee893eef6b3",
+        "requestTime": "2025-08-12T15:58:25.909Z"
+      }
+    },
+    {
+      "frameNum": "006",
+      "targetTimestamp": "2025-07-12T16:58:14.807Z",
+      "sdo": {
+        "actualDate": "2025-07-12T16:58:14.807Z",
+        "checksum": "6972dab7e6d3c4f7e0c11a7bb69d449a",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "lasco": {
+        "actualDate": "2025-07-12T16:58:14.807Z",
+        "checksum": "d513abfbcb8cbc159b58444ec193baab",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "quality": {
+        "score": 1,
+        "bothUnique": true,
+        "fallbackUsed": false
+      },
+      "performance": {
+        "apiResponseTime": 6024,
+        "totalProcessingTime": 6.042,
+        "fileSize": 1579320,
+        "retryAttempt": 1
+      },
+      "technical": {
+        "filename": "optimized_12min_frames/frame_006_source.png",
+        "compositeChecksum": "fb7fd017db8fee570ead9e2579edf29e",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T16%3A58%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=602d53c1342fe8c8ce78cb91bf3aea36&previousLascoChecksum=94733fd6b9a809f887f24ee893eef6b3",
+        "requestTime": "2025-08-12T15:58:25.910Z"
+      }
+    },
+    {
+      "frameNum": "007",
+      "targetTimestamp": "2025-07-12T17:10:14.807Z",
+      "sdo": {
+        "actualDate": "2025-07-12T17:10:14.807Z",
+        "checksum": "591132141220dac3424d6a6eb6b4da2e",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "lasco": {
+        "actualDate": "2025-07-12T17:10:14.807Z",
+        "checksum": "737e0de3d222152d44b6b87dd43d5115",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "quality": {
+        "score": 1,
+        "bothUnique": true,
+        "fallbackUsed": false
+      },
+      "performance": {
+        "apiResponseTime": 4954,
+        "totalProcessingTime": 4.966,
+        "fileSize": 1579804,
+        "retryAttempt": 1
+      },
+      "technical": {
+        "filename": "optimized_12min_frames/frame_007_source.png",
+        "compositeChecksum": "c9775145627726aab06cdedf83f6a56e",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T17%3A10%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=6972dab7e6d3c4f7e0c11a7bb69d449a&previousLascoChecksum=d513abfbcb8cbc159b58444ec193baab",
+        "requestTime": "2025-08-12T15:58:39.905Z"
+      }
+    },
+    {
+      "frameNum": "008",
+      "targetTimestamp": "2025-07-12T17:22:14.807Z",
+      "sdo": {
+        "actualDate": "2025-07-12T17:22:14.807Z",
+        "checksum": "b23e03d1fb5839dd74663e7b451e0757",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "lasco": {
+        "actualDate": "2025-07-12T17:22:14.807Z",
+        "checksum": "2f46351c6a3b0ff056ceb10e49003ee9",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "quality": {
+        "score": 1,
+        "bothUnique": true,
+        "fallbackUsed": false
+      },
+      "performance": {
+        "apiResponseTime": 4928,
+        "totalProcessingTime": 4.939,
+        "fileSize": 1580853,
+        "retryAttempt": 1
+      },
+      "technical": {
+        "filename": "optimized_12min_frames/frame_008_source.png",
+        "compositeChecksum": "113389ff24930b173a362f8ef34c8cb7",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T17%3A22%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=6972dab7e6d3c4f7e0c11a7bb69d449a&previousLascoChecksum=d513abfbcb8cbc159b58444ec193baab",
+        "requestTime": "2025-08-12T15:58:39.909Z"
+      }
+    },
+    {
+      "frameNum": "009",
+      "targetTimestamp": "2025-07-12T17:34:14.807Z",
+      "sdo": {
+        "actualDate": "2025-07-12T17:34:14.807Z",
+        "checksum": "9b085944d2635473f96207666075a822",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "lasco": {
+        "actualDate": "2025-07-12T17:34:14.807Z",
+        "checksum": "cbfce896f5a0208bfbd17bfa05cc38ec",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "quality": {
+        "score": 1,
+        "bothUnique": true,
+        "fallbackUsed": false
+      },
+      "performance": {
+        "apiResponseTime": 4554,
+        "totalProcessingTime": 4.578,
+        "fileSize": 1571152,
+        "retryAttempt": 1
+      },
+      "technical": {
+        "filename": "optimized_12min_frames/frame_009_source.png",
+        "compositeChecksum": "2c48360b684cfe35bdaa4f07216e3471",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T17%3A34%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=6972dab7e6d3c4f7e0c11a7bb69d449a&previousLascoChecksum=d513abfbcb8cbc159b58444ec193baab",
+        "requestTime": "2025-08-12T15:58:39.911Z"
+      }
+    },
+    {
+      "frameNum": "010",
+      "targetTimestamp": "2025-07-12T17:46:14.807Z",
+      "sdo": {
+        "actualDate": "2025-07-12T17:46:14.807Z",
+        "checksum": "7773f77d0de2632080ae305fe43ec6eb",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "lasco": {
+        "actualDate": "2025-07-12T17:46:14.807Z",
+        "checksum": "9f35f425a4f339758572bb82b188c4aa",
+        "unique": true,
+        "searchType": "exact_match"
+      },
+      "quality": {
+        "score": 1,
+        "bothUnique": true,
+        "fallbackUsed": false
+      },
+      "performance": {
+        "apiResponseTime": 4287,
+        "totalProcessingTime": 4.299,
+        "fileSize": 1584047,
+        "retryAttempt": 1
+      },
+      "technical": {
+        "filename": "optimized_12min_frames/frame_010_source.png",
+        "compositeChecksum": "b63128e413c7e579d5f30a3009773287",
+        "url": "http://localhost:3004/verified-composite?date=2025-07-12T17%3A46%3A14.807Z&style=ad-astra&cropWidth=1440&cropHeight=1200&compositeRadius=400&featherRadius=40&previousSdoChecksum=9b085944d2635473f96207666075a822&previousLascoChecksum=cbfce896f5a0208bfbd17bfa05cc38ec",
+        "requestTime": "2025-08-12T15:58:52.434Z"
       }
     }
   ],
   "summary": {
-    "totalApiCalls": 4,
-    "totalProcessingTime": 16.534,
+    "totalApiCalls": 10,
+    "totalProcessingTime": 51.588,
     "smartSearchesTriggered": 0,
-    "exactMatches": 4,
+    "exactMatches": 10,
     "fallbacksUsed": 0,
     "uniquenessFailures": 0,
     "retries": 0,
-    "totalFrames": 4,
-    "successfulFrames": 4,
+    "totalFrames": 10,
+    "successfulFrames": 10,
     "successRate": 1,
-    "totalDuration": 16.566,
-    "avgProcessingTime": 4.1335
+    "totalDuration": 44.013,
+    "avgProcessingTime": 5.1588,
+    "interpolationFactor": 4
   },
-  "endTime": "2025-08-12T21:43:51.936Z"
+  "endTime": "2025-08-12T15:58:58.813Z"
 }

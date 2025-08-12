@@ -261,3 +261,44 @@ for (let i = 0; i < 96; i++) {
 - Metadata headers enable quality control and debugging
 
 The system is optimized for generating high-quality solar time-lapse videos with reliable data sources and sophisticated visual processing.
+
+## Frame Interpolation
+
+This system includes a powerful frame interpolation pipeline to generate exceptionally smooth time-lapse videos. Instead of a simple cross-fade, it uses a motion-based algorithm (`@thi.ng/pixel-flow`) to analyze pixel movement between frames and generate high-quality, intermediate "warped" frames.
+
+### Features
+
+-   **High-Quality Algorithm:** Utilizes dense optical flow to create cinema-style, smooth motion.
+-   **Configurable:** You can easily enable/disable interpolation, set the interpolation factor (e.g., 2x, 4x), and configure quality thresholds.
+-   **Solar-Physics-Aware:** The pipeline is designed to avoid interpolating between low-quality or fallback frames, preventing the generation of physically inaccurate images.
+
+### Configuration
+
+All interpolation settings are located in the `CONFIG.interpolation` object in `generate_full_video.js`:
+
+```javascript
+interpolation: {
+    enabled: true,               // Master switch for interpolation
+    factor: 4,                   // Generate (factor - 1) intermediate frames (e.g., 4x = 3 new frames)
+    algorithm: 'motion-based',   // Currently supports 'motion-based'
+    qualityThreshold: 0.9,       // Only interpolate if both base frames are above this quality score
+    avoidFallbacks: true         // Do not interpolate if either base frame used a fallback
+},
+```
+
+### Validation
+
+A validation script is included to measure the accuracy of the interpolation against ground-truth data from the NASA API.
+
+To run the validation:
+
+1.  First, generate a video with interpolation enabled:
+    ```bash
+    node generate_full_video.js
+    ```
+2.  Then, run the validation script:
+    ```bash
+    node validate_interpolation.js
+    ```
+
+The script will pick a random interpolated frame, download the corresponding real frame, and output a Structural Similarity (SSIM) score. A score of `1.0` indicates a perfect match.

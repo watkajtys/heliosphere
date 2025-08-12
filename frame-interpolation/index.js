@@ -1,75 +1,89 @@
+import fs from 'fs/promises';
 import sharp from 'sharp';
-import path from 'path';
+import { GRAY8, intBuffer } from "@thi.ng/pixel";
+import { OpticalFlow } from "@thi.ng/pixel-flow";
 
 /**
- * Generates intermediate frames between two images using frame blending.
+ * Generates intermediate frames between two images using the @thi.ng/pixel-flow library.
  *
- * @param {string} frameAPath - The file path to the first frame (e.g., 'frame_001.png').
- * @param {string} frameBPath - The file path to the second frame (e.g., 'frame_002.png').
- * @param {number} interpolationFactor - The number of frames to generate between A and B (e.g., a factor of 2 means 1 intermediate frame).
- * @param {string} outputDir - The directory to save the interpolated frames in.
- * @returns {Promise<string[]>} A promise that resolves with an array of file paths for the newly created frames.
+ * @param {string} frameAPath - Path to the first frame.
+ * @param {string} frameBPath - Path to the second frame.
+ * @param {number} intermediateFrameCount - How many frames to generate between A and B.
+ * @param {string} outputDir - Directory to save the interpolated frames.
+ * @param {string} baseFrameNum - The base number for the output frames.
  */
-export async function blendFrames(frameAPath, frameBPath, interpolationFactor, outputDir) {
-    try {
-        const newFramePaths = [];
-        if (interpolationFactor <= 1) {
-            return newFramePaths;
-        }
+export async function interpolateFrames(frameAPath, frameBPath, intermediateFrameCount, outputDir, baseFrameNum) {
+    console.log(`Interpolating ${intermediateFrameCount} frames between ${frameAPath} and ${frameBPath} using @thi.ng/pixel-flow.`);
 
+    try {
+        // 1. Load images with sharp
         const imageA = sharp(frameAPath);
         const imageB = sharp(frameBPath);
 
-        const [metadataA, metadataB] = await Promise.all([
-            imageA.metadata(),
-            imageB.metadata()
-        ]);
+        const { width, height, channels } = await imageA.metadata();
 
-        if (metadataA.width !== metadataB.width || metadataA.height !== metadataB.height || metadataA.channels !== metadataB.channels) {
-            throw new Error('Images must have the same dimensions and channels.');
-        }
+        // 2. Convert to grayscale IntBuffer format for the library
+        const grayA_raw = await imageA.grayscale().raw().toBuffer();
+        const grayB_raw = await imageB.grayscale().raw().toBuffer();
 
-        const [bufferA, bufferB] = await Promise.all([
-            imageA.raw().toBuffer(),
-            imageB.raw().toBuffer()
-        ]);
+        const bufferA = intBuffer(width, height, GRAY8);
+        bufferA.data.set(grayA_raw);
 
-        // The number of intermediate frames to generate is factor - 1
-        const intermediateFrameCount = interpolationFactor - 1;
+        const bufferB = intBuffer(width, height, GRAY8);
+        bufferB.data.set(grayB_raw);
+
+        // 3. Instantiate OpticalFlow and calculate the flow field
+        // These parameters are tuned for quality and performance.
+        const flow = new OpticalFlow(bufferA, {
+            scale: 0.5, // Process at half resolution for speed
+            lambda: 0.05,
+            smooth: 1.5,
+            threshold: 0.002,
+            iter: 4,
+        });
+
+        const flowField = flow.update(bufferB);
+        const vectors = flowField.data;
+
+        // 4. Warp frame A based on the calculated flow vectors
+        console.log('   - Warping frames based on flow field...');
+        const { data: sourceData } = await sharp(frameAPath).raw().toBuffer({ resolveWithObject: true });
 
         for (let i = 1; i <= intermediateFrameCount; i++) {
-            const weightB = i / interpolationFactor;
-            const weightA = 1 - weightB;
+            const step = i / (intermediateFrameCount + 1);
+            const warpedData = Buffer.alloc(sourceData.length);
 
-            const blendedBuffer = Buffer.alloc(bufferA.length);
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const vectorIndex = (y * width + x) * 2;
+                    const vx = vectors[vectorIndex];
+                    const vy = vectors[vectorIndex + 1];
 
-            for (let j = 0; j < bufferA.length; j++) {
-                blendedBuffer[j] = Math.round((bufferA[j] * weightA) + (bufferB[j] * weightB));
+                    const srcX = Math.round(x + vx * step);
+                    const srcY = Math.round(y + vy * step);
+
+                    const dstIdx = (y * width + x) * channels;
+
+                    if (srcX >= 0 && srcX < width && srcY >= 0 && srcY < height) {
+                        const srcIdx = (srcY * width + srcX) * channels;
+                        for (let c = 0; c < channels; c++) {
+                            warpedData[dstIdx + c] = sourceData[srcIdx + c];
+                        }
+                    } else {
+                        for (let c = 0; c < channels; c++) {
+                            warpedData[dstIdx + c] = sourceData[dstIdx + c];
+                        }
+                    }
+                }
             }
 
-            const frameAName = path.basename(frameAPath, path.extname(frameAPath));
-            const frameBName = path.basename(frameBPath, path.extname(frameBPath));
-
-            // A more descriptive name for the interpolated frame
-            const newFrameName = `${frameAName}_interp_${i}_of_${intermediateFrameCount}.png`;
-            const outputPath = path.join(outputDir, newFrameName);
-
-            await sharp(blendedBuffer, {
-                raw: {
-                    width: metadataA.width,
-                    height: metadataA.height,
-                    channels: metadataA.channels,
-                },
-            })
-            .toFile(outputPath);
-
-            newFramePaths.push(outputPath);
+            // 5. Save the new frame
+            const outputFilename = `${outputDir}/frame_${baseFrameNum}_interp_${i}.png`;
+            await sharp(warpedData, { raw: { width, height, channels } }).toFile(outputFilename);
+            console.log(`   ✅ Saved interpolated frame: ${outputFilename}`);
         }
 
-        return newFramePaths;
-
     } catch (error) {
-        console.error(`Error during frame blending between ${frameAPath} and ${frameBPath}:`, error);
-        throw error;
+        console.error('❌ Error during frame interpolation:', error);
     }
 }

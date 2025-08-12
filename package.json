@@ -13,6 +13,8 @@
 	},
 	"dependencies": {
 		"express": "^4.19.2",
-		"sharp": "^0.33.4"
+		"oflow": "^0.4.0",
+		"sharp": "^0.33.5",
+		"ssim.js": "^3.5.0"
 	}
 }
