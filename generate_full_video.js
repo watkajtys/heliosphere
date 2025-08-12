@@ -8,13 +8,13 @@ import fs from 'fs';
  * Generates full 24-hour video with detailed logging of smart fallback system
  */
 
-// Configuration - Multi-Day Comprehensive Testing
+// Configuration - Optimized 12-minute intervals (2.5 minute video)
 const CONFIG = {
-    frameCount: 144,             // 72 hours (3 days) at 30-minute intervals  
-    intervalMinutes: 30,         // 30 minutes between frames
-    hoursBack: 96,              // Start 96 hours ago (4 days back for stable data)
+    frameCount: 3600,            // 30 days at 12-minute intervals (2.5 min video at 24fps)
+    intervalMinutes: 12,         // 12 minutes between frames (matches LASCO cadence)
+    hoursBack: 744,             // Start 31 days ago (744 hours for stable data)
     baseUrl: 'http://localhost:3004/verified-composite',
-    outputDir: 'multi_day_frames',
+    outputDir: 'optimized_12min_frames',
     style: 'ad-astra',
     cropWidth: 1440,
     cropHeight: 1200,
@@ -45,7 +45,7 @@ const PROGRESS = {
     status: 'starting',
     progress: { current: 0, total: CONFIG.frameCount },
     performance: { avgTime: 0, totalTime: 0 },
-    fallbacks: { count: 0, rate: 0 },
+    fallbacks: { count: 0, rate: 0, details: [] },
     log: [],
     lastUpdate: new Date().toISOString()
 };
@@ -210,6 +210,42 @@ async function generateFrameWithLogging(frameData, previousChecksums = {}, attem
             LOG.summary.fallbacksUsed++;
         }
         
+        // Detailed fallback logging
+        const sdoFallback = frameMetadata.sdo.searchType === 'smart_fallback';
+        const lascoFallback = frameMetadata.lasco.searchType === 'smart_fallback';
+        
+        if (sdoFallback || lascoFallback) {
+            const fallbackDetail = {
+                frameNum: frameNum,
+                targetTimestamp: timestamp,
+                sdoFallback: sdoFallback ? {
+                    requestedTime: timestamp,
+                    actualTime: frameMetadata.sdo.actualDate,
+                    timeDelta: Math.abs(new Date(timestamp) - new Date(frameMetadata.sdo.actualDate)) / (1000 * 60), // minutes
+                    unique: frameMetadata.sdo.unique
+                } : null,
+                lascoFallback: lascoFallback ? {
+                    requestedTime: timestamp,
+                    actualTime: frameMetadata.lasco.actualDate,
+                    timeDelta: Math.abs(new Date(timestamp) - new Date(frameMetadata.lasco.actualDate)) / (1000 * 60), // minutes
+                    unique: frameMetadata.lasco.unique
+                } : null,
+                fallbackResolved: frameMetadata.quality.bothUnique
+            };
+            
+            PROGRESS.fallbacks.details.push(fallbackDetail);
+            
+            // Enhanced logging for fallback detection
+            logProgress(`⚠️  FALLBACK DETECTED - Frame ${frameNum}:`);
+            if (sdoFallback) {
+                logProgress(`   🌅 SDO: Requested ${timestamp} → Found ${frameMetadata.sdo.actualDate} (Δ${fallbackDetail.sdoFallback.timeDelta.toFixed(1)}min) ${frameMetadata.sdo.unique ? '✅' : '❌'}`);
+            }
+            if (lascoFallback) {
+                logProgress(`   🌙 LASCO: Requested ${timestamp} → Found ${frameMetadata.lasco.actualDate} (Δ${fallbackDetail.lascoFallback.timeDelta.toFixed(1)}min) ${frameMetadata.lasco.unique ? '✅' : '❌'}`);
+            }
+            logProgress(`   🎯 Resolution: ${fallbackDetail.fallbackResolved ? 'SUCCESS - Both components unique' : 'PARTIAL - Quality may be affected'}`);
+        }
+        
         if (!frameMetadata.quality.bothUnique) {
             LOG.summary.uniquenessFailures++;
         }
@@ -362,6 +398,37 @@ async function generateFullVideo() {
     console.log(`   Uniqueness failures: ${LOG.summary.uniquenessFailures}`);
     console.log(`   Retries required: ${LOG.summary.retries}`);
     console.log('');
+    
+    // Detailed fallback analysis
+    if (PROGRESS.fallbacks.details.length > 0) {
+        console.log(`⚠️  Detailed Fallback Analysis:`);
+        console.log(`   Total fallbacks detected: ${PROGRESS.fallbacks.details.length}`);
+        
+        const sdoFallbacks = PROGRESS.fallbacks.details.filter(f => f.sdoFallback);
+        const lascoFallbacks = PROGRESS.fallbacks.details.filter(f => f.lascoFallback);
+        const resolvedFallbacks = PROGRESS.fallbacks.details.filter(f => f.fallbackResolved);
+        
+        console.log(`   SDO fallbacks: ${sdoFallbacks.length}`);
+        console.log(`   LASCO fallbacks: ${lascoFallbacks.length}`);
+        console.log(`   Successfully resolved: ${resolvedFallbacks.length}/${PROGRESS.fallbacks.details.length} (${(resolvedFallbacks.length / PROGRESS.fallbacks.details.length * 100).toFixed(1)}%)`);
+        
+        // Show each fallback in detail
+        PROGRESS.fallbacks.details.forEach((fallback, index) => {
+            console.log(`   \n   Fallback ${index + 1} - Frame ${fallback.frameNum}:`);
+            console.log(`     Target: ${fallback.targetTimestamp}`);
+            if (fallback.sdoFallback) {
+                console.log(`     🌅 SDO: ${fallback.sdoFallback.actualTime} (Δ${fallback.sdoFallback.timeDelta.toFixed(1)}min) ${fallback.sdoFallback.unique ? '✅' : '❌'}`);
+            }
+            if (fallback.lascoFallback) {
+                console.log(`     🌙 LASCO: ${fallback.lascoFallback.actualTime} (Δ${fallback.lascoFallback.timeDelta.toFixed(1)}min) ${fallback.lascoFallback.unique ? '✅' : '❌'}`);
+            }
+            console.log(`     🎯 Resolution: ${fallback.fallbackResolved ? 'SUCCESS' : 'PARTIAL'}`);
+        });
+        console.log('');
+    } else {
+        console.log(`✅ Perfect Data Availability - No fallbacks needed!`);
+        console.log('');
+    }
     
     console.log(`⚡ Performance Metrics:`);
     console.log(`   Total API calls: ${LOG.summary.totalApiCalls}`);
