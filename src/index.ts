@@ -124,19 +124,19 @@ async function findOptimalComponentData(
 	imageScale: number, 
 	width: number, 
 	height: number, 
-	previousChecksum: string | null, 
+	usedChecksums: string[],
 	style: string
 ): Promise<{buffer: Buffer, actualDate: string, checksum: string, isUnique: boolean}> {
 	// Define search strategy based on source type and data cadence
 	const isSDO = sourceId === 10;
-	const maxSearchMinutes = isSDO ? 60 : 60; // SDO: ±60min, LASCO: ±60min
-	// Use data-cadence-aware search steps: SDO ~12min intervals, LASCO ~30min intervals
-	const searchSteps = isSDO ? [12, 24, 36, 48, 60] : [15, 30, 45, 60]; // Aligned with actual data availability
+	const maxSearchMinutes = 60; // Max search window is ±60 minutes
+	// Use finer-grained search steps as requested, universal for both sources
+	const searchSteps = [3, 5, 10, 15, 30, 45, 60];
 	
 	console.log(`🔍 Finding optimal ${isSDO ? 'SDO' : 'LASCO'} data for ${isoDate}`);
 	console.log(`   Search strategy: ±${maxSearchMinutes}min window, steps: [${searchSteps.join(', ')}]min`);
-	if (previousChecksum) {
-		console.log(`   Previous checksum: ${previousChecksum.substring(0, 8)}... (avoiding duplicates)`);
+	if (usedChecksums.length > 0) {
+		console.log(`   Avoiding ${usedChecksums.length} previously used checksums.`);
 	}
 	
 	// Helper function to process and checksum image with raw verification
@@ -168,14 +168,14 @@ async function findOptimalComponentData(
 		const rawBuffer = await fetchHelioviewerImage(isoDate, apiKey, sourceId, imageScale, width, height);
 		const {buffer, checksum, rawChecksum} = await processAndChecksum(rawBuffer);
 		
-		// Check uniqueness using raw checksum (before color processing)
-		const isUnique = !previousChecksum || rawChecksum !== previousChecksum;
+		// Check uniqueness against the entire history
+		const isUnique = !usedChecksums.includes(rawChecksum);
 		
 		if (isUnique) {
-			console.log(`✅ Exact timestamp success: raw=${rawChecksum.substring(0, 8)}... processed=${checksum.substring(0, 8)}... (unique)`);
+			console.log(`✅ Exact timestamp success: raw=${rawChecksum.substring(0, 8)}... (unique)`);
 			return { buffer, actualDate: isoDate, checksum: rawChecksum, isUnique: true };
 		} else {
-			console.log(`⚠️ Exact timestamp duplicate: raw=${rawChecksum.substring(0, 8)}... (same as previous, searching alternatives)`);
+			console.log(`⚠️ Exact timestamp duplicate: raw=${rawChecksum.substring(0, 8)}... (already used, searching alternatives)`);
 		}
 	} catch (error) {
 		console.log(`❌ Exact timestamp failed, searching alternatives...`);
@@ -207,8 +207,8 @@ async function findOptimalComponentData(
 				const rawBuffer = await fetchHelioviewerImage(targetIsoDate, apiKey, sourceId, imageScale, width, height);
 				const {buffer, checksum, rawChecksum} = await processAndChecksum(rawBuffer);
 				
-				// Check uniqueness using raw checksum (API-level duplicate detection)
-				const isUnique = !previousChecksum || rawChecksum !== previousChecksum;
+				// Check uniqueness using the entire checksum history
+				const isUnique = !usedChecksums.includes(rawChecksum);
 				
 				if (isUnique) {
 					if (!fallbackTriggered) {
@@ -220,11 +220,11 @@ async function findOptimalComponentData(
 					return { buffer, actualDate: targetIsoDate, checksum: rawChecksum, isUnique: true };
 				} else {
 					candidates.push({ buffer, actualDate: targetIsoDate, checksum: rawChecksum, offset: Math.abs(offsetMinutes) });
-					console.log(`   ❌ DUPLICATE: raw=${rawChecksum.substring(0, 8)}... (matches previous frame)`);
+					console.log(`   ❌ DUPLICATE: raw=${rawChecksum.substring(0, 8)}... (already in history)`);
 				}
 			} catch (error) {
-				console.log(`   ⚠️  API ERROR: ${error instanceof Error ? error.message : 'Unknown error'}`);
-				// Continue searching
+				// This is a recoverable error (e.g., API has no data for this specific minute)
+				console.log(`   -> No data at this offset. Continuing search.`);
 			}
 		}
 	}
@@ -232,14 +232,27 @@ async function findOptimalComponentData(
 	console.log(`⚠️  Progressive search completed: ${searchAttempts} attempts, ${candidates.length} duplicates found, 0 unique data`);
 	fallbackTriggered = true;
 	
-	// If no unique candidate found, fail completely - never return duplicates for video generation
-	const duplicateCount = candidates.length;
-	if (duplicateCount > 0) {
-		console.log(`❌ Found ${duplicateCount} duplicate candidates but refusing to return duplicates for video generation`);
+	// Graceful degradation: If no unique candidates are found, use the best available duplicate.
+	if (candidates.length > 0) {
+		// Sort candidates by the smallest time offset to find the closest match
+		candidates.sort((a, b) => a.offset - b.offset);
+		const bestDuplicate = candidates[0];
+
+		console.log(`🟡 GRACEFUL DEGRADATION: No unique frame found. Using best available duplicate.`);
+		console.log(`   Best duplicate is from ${bestDuplicate.actualDate} (offset: ${bestDuplicate.offset}min)`);
+
+		// Return the best duplicate, explicitly marking it as not unique
+		return {
+			buffer: bestDuplicate.buffer,
+			actualDate: bestDuplicate.actualDate,
+			checksum: bestDuplicate.checksum,
+			isUnique: false
+		};
 	}
 	
-	// Complete failure - no unique data available
-	throw new Error(`No unique ${isSDO ? 'SDO' : 'LASCO'} data available within ±${maxSearchMinutes} minutes of ${isoDate}. Found ${duplicateCount} duplicates but rejecting for video quality.`);
+	// If we reach here, it means no images were found at all (unique or duplicate).
+	// This is a hard failure condition.
+	throw new Error(`No ${isSDO ? 'SDO' : 'LASCO'} data available within ±${maxSearchMinutes} minutes of ${isoDate}. No images found at any fallback offset.`);
 }
 
 
@@ -847,8 +860,8 @@ async function createVerifiedCompositeImage(
 	style: string = 'ad-astra',
 	cropWidth: number = 1440,
 	cropHeight: number = 1200,
-	previousSdoChecksum: string | null = null,
-	previousLascoChecksum: string | null = null
+	usedSdoChecksums: string[] = [],
+	usedLascoChecksums: string[] = []
 ): Promise<{
 	buffer: Buffer,
 	metadata: {
@@ -871,16 +884,16 @@ async function createVerifiedCompositeImage(
 	const coronaImageScale = 8;
 	const sunDiskImageScale = 2.5;
 	
-	// Find optimal SDO component (high frequency source - search ±15min)
+	// Find optimal SDO component
 	const sdoDataPromise = findOptimalComponentData(
 		isoDate, apiKey, 10, sunDiskImageScale, width, width, 
-		previousSdoChecksum, style
+		usedSdoChecksums, style
 	);
 	
-	// Find optimal LASCO component (low frequency source - search ±60min)  
+	// Find optimal LASCO component
 	const lascoDataPromise = findOptimalComponentData(
 		isoDate, apiKey, 4, coronaImageScale, width, height,
-		previousLascoChecksum, style
+		usedLascoChecksums, style
 	);
 	
 	const [sdoData, lascoData] = await Promise.all([sdoDataPromise, lascoDataPromise]);
@@ -1080,17 +1093,27 @@ app.get('/verified-composite', async (req, res) => {
 	const cropWidth = req.query.cropWidth ? parseInt(req.query.cropWidth as string) : 1440;
 	const cropHeight = req.query.cropHeight ? parseInt(req.query.cropHeight as string) : 1200;
 	
-	// Optional previous checksums for uniqueness verification
-	const previousSdoChecksum = req.query.previousSdoChecksum ? (req.query.previousSdoChecksum as string) : null;
-	const previousLascoChecksum = req.query.previousLascoChecksum ? (req.query.previousLascoChecksum as string) : null;
-	
-	console.log(`🎬 Verified composite request: ${isoDate} (prev SDO: ${previousSdoChecksum?.substring(0, 8) || 'none'})`);
+	// Handle used checksums, supporting both new array format and old single checksum for backward compatibility
+	const getChecksums = (param: any): string[] => {
+		if (!param) return [];
+		if (Array.isArray(param)) return param.flatMap(p => p.split(',')); // Handle arrays of strings
+		return (param as string).split(',');
+	};
+
+	const usedSdoChecksums = getChecksums(req.query.usedSdoChecksums);
+	const usedLascoChecksums = getChecksums(req.query.usedLascoChecksums);
+
+	// For backward compatibility, include the old single checksum parameter if present
+	if (req.query.previousSdoChecksum) usedSdoChecksums.push(req.query.previousSdoChecksum as string);
+	if (req.query.previousLascoChecksum) usedLascoChecksums.push(req.query.previousLascoChecksum as string);
+
+	console.log(`🎬 Verified composite request: ${isoDate} (avoiding ${usedSdoChecksums.length} SDO, ${usedLascoChecksums.length} LASCO checksums)`);
 
 	try {
 		// Generate verified composite with component uniqueness checking
 		const result = await createVerifiedCompositeImage(
 			isoDate, apiKey, compositeRadius, featherRadius, style, 
-			cropWidth, cropHeight, previousSdoChecksum, previousLascoChecksum
+			cropWidth, cropHeight, usedSdoChecksums, usedLascoChecksums
 		);
 		
 		res.set('Content-Type', 'image/png');
