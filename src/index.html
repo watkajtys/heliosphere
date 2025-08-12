@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Heliosphere - Solar Composite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .composite-image {
+            width: 100vw;
+            height: 100dvh;
+            object-fit: cover;
+            object-position: center;
+            transition: opacity 0.5s ease-in-out;
+        }
+        
+        /* Landscape orientation - optimized for video */
+        @media screen and (orientation: landscape) {
+            .composite-image {
+                width: 100vw;
+                height: 100dvh;
+                object-fit: cover;
+                object-position: center;
+            }
+        }
+        
+        /* Portrait orientation - mobile optimized */
+        @media screen and (orientation: portrait) {
+            .composite-image {
+                width: 100vw;
+                height: 100dvh;
+                object-fit: cover;
+                object-position: center;
+            }
+        }
+        
+        .time-controls {
+            position: absolute;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .time-button {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .time-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .time-button.active {
+            background: rgba(80, 250, 123, 0.9);
+            color: #000;
+            border-color: rgba(80, 250, 123, 1);
+        }
+        
+        /* Desktop time controls positioning */
+        @media screen and (orientation: landscape) and (min-width: 768px) {
+            .time-controls {
+                top: 20px;
+                right: 20px;
+                max-width: 400px;
+            }
+            
+            .time-button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+        }
+        
+        /* Mobile portrait time controls */
+        @media screen and (orientation: portrait) {
+            .time-controls {
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                justify-content: center;
+                max-width: 90vw;
+            }
+            
+            .time-button {
+                padding: 12px 16px;
+                font-size: 16px;
+                border-radius: 20px;
+            }
+        }
+        
+        /* Mobile landscape time controls */
+        @media screen and (orientation: landscape) and (max-width: 767px) {
+            .time-controls {
+                top: 10px;
+                right: 10px;
+                max-width: 300px;
+            }
+            
+            .time-button {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
+        
+        .loading {
+            color: #50fa7b;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img id="compositeImg" class="composite-image" src="/composite-image?compositeRadius=400&featherRadius=40" alt="Loading solar composite..." onload="hideLoading()">
+        <div id="loading" class="loading">Loading solar composite...</div>
+        
+        <div class="time-controls">
+            <button class="time-button active" data-time="now">Live</button>
+            <button class="time-button" data-time="1h">1 Hour Ago</button>
+            <button class="time-button" data-time="6h">6 Hours Ago</button>
+            <button class="time-button" data-time="1d">Yesterday</button>
+            <button class="time-button" data-time="1w">1 Week Ago</button>
+        </div>
+    </div>
+
+    <script>
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function getDateFromTimeOffset(offset) {
+            const now = new Date();
+            switch(offset) {
+                case 'now':
+                    return now.toISOString();
+                case '1h':
+                    return new Date(now.getTime() - 1 * 60 * 60 * 1000).toISOString();
+                case '6h':
+                    return new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
+                case '1d':
+                    return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+                case '1w':
+                    return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+                default:
+                    return now.toISOString();
+            }
+        }
+        
+        function loadImageForTime(timeOffset) {
+            const img = document.getElementById('compositeImg');
+            const loading = document.getElementById('loading');
+            const isoDate = getDateFromTimeOffset(timeOffset);
+            const timestamp = Date.now();
+            
+            loading.style.display = 'block';
+            img.style.opacity = '0.7';
+            
+            img.onload = () => {
+                hideLoading();
+                img.style.opacity = '1';
+            };
+            
+            img.src = `/composite-image?compositeRadius=400&featherRadius=40&date=${encodeURIComponent(isoDate)}&t=${timestamp}`;
+        }
+        
+        // Time button event handlers
+        document.querySelectorAll('.time-button').forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                document.querySelectorAll('.time-button').forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                button.classList.add('active');
+                
+                // Load image for selected time
+                const timeOffset = button.getAttribute('data-time');
+                loadImageForTime(timeOffset);
+            });
+        });
+        
+        // Auto-refresh only if on "Live" mode
+        setInterval(() => {
+            const activeButton = document.querySelector('.time-button.active');
+            if (activeButton && activeButton.getAttribute('data-time') === 'now') {
+                loadImageForTime('now');
+            }
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

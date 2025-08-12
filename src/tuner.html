@@ -20,8 +20,8 @@
 
         <div class="controls">
             <div class="control-group">
-                <label for="cropRadiusSlider">Crop Radius: <span id="cropRadiusValue" class="value-display">1154</span>px</label>
-                <input type="range" id="cropRadiusSlider" class="slider" min="800" max="1600" value="1154" step="2">
+                <label for="compositeRadiusSlider">Composite Radius: <span id="compositeRadiusValue" class="value-display">600</span>px</label>
+                <input type="range" id="compositeRadiusSlider" class="slider" min="400" max="800" value="600" step="5">
             </div>
             <div class="control-group">
                 <label for="featherRadiusSlider">Feather Radius: <span id="featherRadiusValue" class="value-display">40</span>px</label>
@@ -30,32 +30,32 @@
         </div>
 
         <div class="image-container">
-            <img id="compositeImg" src="/composite-image?cropRadius=1154&featherRadius=40" alt="Loading composite image...">
+            <img id="compositeImg" src="/composite-image?compositeRadius=600&featherRadius=40" alt="Loading composite image...">
         </div>
     </div>
 
     <script>
-        const cropRadiusSlider = document.getElementById('cropRadiusSlider');
-        const cropRadiusValue = document.getElementById('cropRadiusValue');
+        const compositeRadiusSlider = document.getElementById('compositeRadiusSlider');
+        const compositeRadiusValue = document.getElementById('compositeRadiusValue');
         const featherRadiusSlider = document.getElementById('featherRadiusSlider');
         const featherRadiusValue = document.getElementById('featherRadiusValue');
         const compositeImg = document.getElementById('compositeImg');
 
         function updateImage() {
-            const cropRadius = cropRadiusSlider.value;
+            const compositeRadius = compositeRadiusSlider.value;
             const featherRadius = featherRadiusSlider.value;
 
-            cropRadiusValue.textContent = cropRadius;
+            compositeRadiusValue.textContent = compositeRadius;
             featherRadiusValue.textContent = featherRadius;
 
             // Add a timestamp to the URL to force the browser to reload the image
             const timestamp = Date.now();
-            compositeImg.src = `/composite-image?cropRadius=${cropRadius}&featherRadius=${featherRadius}&t=${timestamp}`;
+            compositeImg.src = `/composite-image?compositeRadius=${compositeRadius}&featherRadius=${featherRadius}&t=${timestamp}`;
         }
 
         // Update the text display in real-time as the slider moves
-        cropRadiusSlider.addEventListener('input', () => {
-            cropRadiusValue.textContent = cropRadiusSlider.value;
+        compositeRadiusSlider.addEventListener('input', () => {
+            compositeRadiusValue.textContent = compositeRadiusSlider.value;
         });
         featherRadiusSlider.addEventListener('input', () => {
             featherRadiusValue.textContent = featherRadiusSlider.value;
@@ -63,7 +63,7 @@
 
         // Update the image only when the user has finished changing the value (releases the slider)
         // This prevents sending too many requests to the server.
-        cropRadiusSlider.addEventListener('change', updateImage);
+        compositeRadiusSlider.addEventListener('change', updateImage);
         featherRadiusSlider.addEventListener('change', updateImage);
 
         // No need for an initial call to updateImage() since the <img> tag's src is already set with default values.
