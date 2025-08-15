@@ -165,3 +165,56 @@ dist
 .env*
 !.env.example
 .wrangler/
+
+# Heliosphere specific
+frames/
+frames_desktop/
+frames_mobile/
+production_frames/
+production_videos/
+test_*_frames/
+test_*_videos/
+*.mp4
+*.jpg
+*.png
+!docs/images/**
+
+# API Keys and Secrets
+*_token.json
+*_keys.json
+cloudflare_video_ids.json
+latest_deployment.json
+pages_deployment.json
+immersive_deployment.json
+
+# SSH keys (NEVER commit)
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+authorized_keys
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# PM2
+.pm2/
+pm2.log
+
+# Deployment artifacts
+deployment_*.json
+cloudflare_deploy.html
+production_html_*.html
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

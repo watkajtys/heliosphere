@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heliosphere Optimized Test Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .performance-badge {
+            display: inline-block;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.1);
+            height: 60px;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            height: 100%;
+            border-radius: 30px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-card.highlight {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.1));
+            border: 1px solid #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .stat-value.green {
+            color: #4CAF50;
+        }
+        
+        .comparison-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-row:last-child {
+            border-bottom: none;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .status-running { background: #4CAF50; }
+        .status-completed { background: #9C27B0; }
+        .status-idle { background: #2196F3; }
+        .status-error { background: #f44336; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        .speedup-indicator {
+            font-size: 3em;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Heliosphere Optimized Test Monitor</h1>
+            <p>Parallel Processing with Duplicate Detection</p>
+            <div class="status-badge" id="statusBadge">Loading...</div>
+            <div class="performance-badge" id="speedupBadge">Speedup: --x</div>
+        </div>
+        
+        <div class="progress-container">
+            <h2 style="margin-bottom: 20px;">Processing Progress</h2>
+            <div class="progress-bar-bg">
+                <div class="progress-bar" id="progressBar" style="width: 0%">
+                    0%
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <span><span id="processedFrames">0</span> / <span id="totalFrames">0</span> frames</span>
+                <span>Rate: <span id="rate">0</span> frames/min</span>
+                <span>Runtime: <span id="runtime">0</span>s</span>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card highlight">
+                <div class="stat-label">Processing Rate</div>
+                <div class="stat-value green" id="statRate">0</div>
+            </div>
+            
+            <div class="stat-card highlight">
+                <div class="stat-label">Parallel Speedup</div>
+                <div class="stat-value green" id="statSpeedup">--x</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Frames Fetched</div>
+                <div class="stat-value" id="statFetched">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Processed</div>
+                <div class="stat-value" id="statProcessed">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Duplicate Retries</div>
+                <div class="stat-value" id="statDuplicates">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Fallbacks</div>
+                <div class="stat-value" id="statFallbacks">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Corona Checksums</div>
+                <div class="stat-value" id="statCorona">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Sun Disk Checksums</div>
+                <div class="stat-value" id="statSun">0</div>
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <h3 style="margin-bottom: 15px;">Performance Comparison</h3>
+            <div class="comparison-row">
+                <span>Sequential Processing (old):</span>
+                <span>~9.6 frames/min</span>
+            </div>
+            <div class="comparison-row">
+                <span>Parallel Processing (new):</span>
+                <span id="parallelRate">-- frames/min</span>
+            </div>
+            <div class="comparison-row">
+                <span>Fetch Concurrency:</span>
+                <span>8 parallel fetches</span>
+            </div>
+            <div class="comparison-row">
+                <span>Process Concurrency:</span>
+                <span>4 parallel processes</span>
+            </div>
+            <div class="comparison-row">
+                <span>Average Fetch Time:</span>
+                <span id="avgFetch">--s</span>
+            </div>
+            <div class="comparison-row">
+                <span>Average Process Time:</span>
+                <span id="avgProcess">--s</span>
+            </div>
+        </div>
+        
+        <div class="speedup-indicator" id="speedupIndicator">
+            Measuring Performance...
+        </div>
+        
+        <div class="comparison-section">
+            <h3 style="margin-bottom: 15px;">Video Generation Status</h3>
+            <div class="comparison-row">
+                <span>Status:</span>
+                <span id="videoStatus">Not started</span>
+            </div>
+            <div class="comparison-row">
+                <span>Full Video:</span>
+                <span id="fullVideo">Pending</span>
+            </div>
+            <div class="comparison-row">
+                <span>Social Video:</span>
+                <span id="socialVideo">Pending</span>
+            </div>
+            <div class="comparison-row">
+                <span>Encoding Progress:</span>
+                <span id="encodingProgress">--</span>
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <h3 style="margin-bottom: 15px;">Frame Spot Check</h3>
+            <div id="frameSpotCheckContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                <!-- Frames will be dynamically added here -->
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <p style="font-size: 0.9em; color: rgba(255,255,255,0.7);">Quality Metrics:</p>
+                <div id="qualityMetrics" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
+                    <!-- Metrics will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://65.109.0.112:3003/status';
+        
+        async function fetchStatus() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                updateDisplay(data);
+            } catch (error) {
+                console.error('Error fetching status:', error);
+            }
+        }
+        
+        function updateDisplay(data) {
+            // Status
+            const status = data.status || 'unknown';
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = status.toUpperCase();
+            statusBadge.className = `status-badge status-${status}`;
+            
+            // Progress
+            const processed = data.processedFrames || 0;
+            const total = data.totalFrames || 1;
+            const progress = (processed / total * 100).toFixed(1);
+            
+            document.getElementById('processedFrames').textContent = processed;
+            document.getElementById('totalFrames').textContent = total;
+            document.getElementById('statProcessed').textContent = processed;
+            document.getElementById('statFetched').textContent = data.fetchedFrames || 0;
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${progress}%`;
+            
+            if (status === 'running') {
+                progressBar.classList.add('pulse');
+            } else {
+                progressBar.classList.remove('pulse');
+            }
+            
+            // Runtime and rate
+            const runtime = parseFloat(data.runtime) || 0;
+            document.getElementById('runtime').textContent = Math.floor(runtime);
+            
+            const rate = data.performance?.framesPerMinute || 0;
+            document.getElementById('rate').textContent = rate;
+            document.getElementById('statRate').textContent = `${rate}/min`;
+            document.getElementById('parallelRate').textContent = `${rate} frames/min`;
+            
+            // Performance metrics
+            const speedup = data.performance?.parallelSpeedup || '--';
+            document.getElementById('statSpeedup').textContent = speedup + 'x';
+            document.getElementById('speedupBadge').textContent = `Speedup: ${speedup}x`;
+            
+            if (speedup !== '--' && parseFloat(speedup) > 1) {
+                const improvement = ((parseFloat(speedup) - 1) * 100).toFixed(0);
+                document.getElementById('speedupIndicator').textContent = 
+                    `🚀 ${improvement}% Faster than Sequential!`;
+                document.getElementById('speedupIndicator').style.color = '#4CAF50';
+            }
+            
+            // Average times
+            const avgFetch = data.performance?.avgFetchTime;
+            const avgProcess = data.performance?.avgProcessTime;
+            if (avgFetch) {
+                document.getElementById('avgFetch').textContent = 
+                    `${(avgFetch/1000).toFixed(1)}s`;
+            }
+            if (avgProcess) {
+                document.getElementById('avgProcess').textContent = 
+                    `${(avgProcess/1000).toFixed(1)}s`;
+            }
+            
+            // Duplicate detection
+            document.getElementById('statDuplicates').textContent = 
+                data.duplicateRetries || 0;
+            document.getElementById('statFallbacks').textContent = 
+                data.fallbacksUsed || 0;
+            
+            // Checksums
+            document.getElementById('statCorona').textContent = 
+                data.checksums?.corona || 0;
+            document.getElementById('statSun').textContent = 
+                data.checksums?.sunDisk || 0;
+                
+            // Video Status
+            updateVideoStatus(data);
+            
+            // Frame Spot Check
+            checkFrames(data);
+        }
+        
+        function updateVideoStatus(data) {
+            const hasVideos = data.videos && (data.videos.full || data.videos.social);
+            const isComplete = data.status === 'completed' || data.processedFrames === data.totalFrames;
+            
+            if (hasVideos) {
+                document.getElementById('videoStatus').textContent = '✅ Complete';
+                document.getElementById('videoStatus').style.color = '#4CAF50';
+                
+                if (data.videos.full) {
+                    const size = (data.videos.full.size / 1024 / 1024).toFixed(2);
+                    document.getElementById('fullVideo').textContent = `✓ ${size} MB`;
+                    document.getElementById('fullVideo').style.color = '#4CAF50';
+                }
+                
+                if (data.videos.social) {
+                    const size = (data.videos.social.size / 1024 / 1024).toFixed(2);
+                    document.getElementById('socialVideo').textContent = `✓ ${size} MB`;
+                    document.getElementById('socialVideo').style.color = '#4CAF50';
+                }
+            } else if (isComplete) {
+                document.getElementById('videoStatus').textContent = '🎬 Encoding...';
+                document.getElementById('videoStatus').style.color = '#FFA500';
+                document.getElementById('encodingProgress').textContent = 'Processing with ffmpeg';
+                
+                // Check if ffmpeg is running
+                fetch('http://65.109.0.112:3003/ffmpeg-status')
+                    .then(res => res.json())
+                    .then(ffmpegData => {
+                        if (ffmpegData.running) {
+                            document.getElementById('encodingProgress').textContent = 
+                                `Encoding: ${ffmpegData.progress || 'In progress'}`;
+                        }
+                    })
+                    .catch(() => {});
+            } else {
+                document.getElementById('videoStatus').textContent = 'Waiting for frames';
+                document.getElementById('videoStatus').style.color = '#888';
+            }
+        }
+        
+        function checkFrames(data) {
+            const container = document.getElementById('frameSpotCheckContainer');
+            const metricsContainer = document.getElementById('qualityMetrics');
+            
+            // Only check frames if some have been processed
+            if (data.processedFrames > 0) {
+                const totalProcessed = data.processedFrames;
+                const totalFrames = data.totalFrames || 192;
+                
+                // Calculate which frames to check (start, 25%, 50%, 75%, end)
+                const checkPoints = [
+                    { frame: 0, label: 'Start' },
+                    { frame: Math.floor(totalProcessed * 0.25), label: '25%' },
+                    { frame: Math.floor(totalProcessed * 0.5), label: '50%' },
+                    { frame: Math.floor(totalProcessed * 0.75), label: '75%' },
+                    { frame: Math.min(totalProcessed - 1, totalFrames - 1), label: 'Latest' }
+                ];
+                
+                // Remove duplicates and invalid frames
+                const uniqueFrames = [...new Set(checkPoints.map(cp => cp.frame))]
+                    .filter(f => f >= 0 && f < totalProcessed)
+                    .slice(0, 5);
+                
+                // Clear and rebuild container
+                container.innerHTML = '';
+                
+                uniqueFrames.forEach((frameNum, index) => {
+                    const checkpoint = checkPoints.find(cp => cp.frame === frameNum) || { label: `Frame ${frameNum}` };
+                    const frameDiv = document.createElement('div');
+                    frameDiv.style.textAlign = 'center';
+                    frameDiv.innerHTML = `
+                        <p style="margin-bottom: 10px; font-size: 0.9em;">
+                            ${checkpoint.label} (Frame ${frameNum + 1})
+                        </p>
+                        <img id="frame_${frameNum}" 
+                             src="http://65.109.0.112:3003/frame/${String(frameNum).padStart(5, '0')}" 
+                             style="width: 100%; border-radius: 8px; cursor: pointer;"
+                             onclick="analyzeFrame(${frameNum})" />
+                        <div id="frameStatus_${frameNum}" style="margin-top: 5px; font-size: 0.8em; color: rgba(255,255,255,0.6);">
+                            Loading...
+                        </div>
+                    `;
+                    container.appendChild(frameDiv);
+                    
+                    // Handle image load/error
+                    const img = document.getElementById(`frame_${frameNum}`);
+                    img.onload = () => {
+                        document.getElementById(`frameStatus_${frameNum}`).innerHTML = 
+                            '<span style="color: #4CAF50;">✓ Loaded</span>';
+                        validateFrameQuality(img, frameNum);
+                    };
+                    img.onerror = () => {
+                        img.style.display = 'none';
+                        document.getElementById(`frameStatus_${frameNum}`).innerHTML = 
+                            '<span style="color: #f44336;">✗ Not available</span>';
+                    };
+                });
+                
+                // Update quality metrics summary
+                updateQualityMetrics(data);
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.5);">No frames processed yet</p>';
+            }
+        }
+        
+        function validateFrameQuality(img, frameNum) {
+            // Basic quality validation based on image properties
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+            
+            try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                // Calculate basic metrics
+                let totalBrightness = 0;
+                let blackPixels = 0;
+                let whitePixels = 0;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+                    totalBrightness += avg;
+                    if (avg < 10) blackPixels++;
+                    if (avg > 245) whitePixels++;
+                }
+                
+                const pixelCount = data.length / 4;
+                const avgBrightness = totalBrightness / pixelCount;
+                const blackRatio = (blackPixels / pixelCount * 100).toFixed(1);
+                const whiteRatio = (whitePixels / pixelCount * 100).toFixed(1);
+                
+                // Update status with quality info
+                const statusEl = document.getElementById(`frameStatus_${frameNum}`);
+                const quality = avgBrightness > 30 && avgBrightness < 150 && blackRatio < 50 ? 'Good' : 'Check';
+                const color = quality === 'Good' ? '#4CAF50' : '#FFA500';
+                
+                statusEl.innerHTML = `
+                    <span style="color: ${color};">
+                        ${quality} | Bright: ${avgBrightness.toFixed(0)} | Black: ${blackRatio}%
+                    </span>
+                `;
+            } catch (e) {
+                // CORS or other error - can't analyze
+                console.log('Cannot analyze frame due to CORS');
+            }
+        }
+        
+        function updateQualityMetrics(data) {
+            const container = document.getElementById('qualityMetrics');
+            
+            // Calculate aggregate metrics
+            const metrics = [
+                { label: 'Unique Corona', value: data.checksums?.corona || 0, color: '#4CAF50' },
+                { label: 'Unique Sun Disk', value: data.checksums?.sunDisk || 0, color: '#4CAF50' },
+                { label: 'Duplicates Found', value: data.duplicateRetries || 0, color: data.duplicateRetries > 10 ? '#FFA500' : '#4CAF50' },
+                { label: 'Fallbacks Used', value: data.fallbacksUsed || 0, color: data.fallbacksUsed > 20 ? '#FFA500' : '#4CAF50' }
+            ];
+            
+            container.innerHTML = metrics.map(m => `
+                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 5px;">
+                    <div style="font-size: 0.8em; color: rgba(255,255,255,0.6);">${m.label}</div>
+                    <div style="font-size: 1.2em; font-weight: bold; color: ${m.color};">${m.value}</div>
+                </div>
+            `).join('');
+        }
+        
+        function analyzeFrame(frameNum) {
+            // Placeholder for future frame analysis
+            console.log(`Analyzing frame ${frameNum}`);
+        }
+        
+        // Initial fetch
+        fetchStatus();
+        
+        // Update every 2 seconds
+        setInterval(fetchStatus, 2000);
+        
+        console.log('Monitoring optimized test at:', API_URL);
+    </script>
+</body>
+</html>
