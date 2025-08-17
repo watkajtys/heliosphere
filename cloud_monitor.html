@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heliosphere Cloud Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        
+        .status-card h3 {
+            font-size: 0.9em;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .status-subtext {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .progress-container {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .progress-bar-wrapper {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            height: 30px;
+            overflow: hidden;
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .control-panel {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .control-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+        }
+        
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .control-btn.danger {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: #fff;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        
+        .status-indicator.idle {
+            background: rgba(158, 158, 158, 0.2);
+            border: 1px solid #9e9e9e;
+            color: #9e9e9e;
+        }
+        
+        .status-indicator.running {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .status-indicator.completed {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid #2196F3;
+            color: #2196F3;
+        }
+        
+        .status-indicator.stopped {
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid #FF9800;
+            color: #FF9800;
+        }
+        
+        .status-indicator.error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            color: #f44336;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .status-indicator.running::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .info-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .info-section h2 {
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+        
+        .frame-preview {
+            max-width: 300px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .refresh-info {
+            text-align: center;
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Heliosphere Cloud Monitor</h1>
+            <p>56-Day Solar Timelapse Generator</p>
+            <div class="status-indicator" id="statusIndicator">
+                <span id="statusText">Loading...</span>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <button class="control-btn" onclick="startGeneration()">Start Generation</button>
+            <button class="control-btn" onclick="startTest()">Test (10 frames)</button>
+            <button class="control-btn danger" onclick="stopGeneration()">Stop</button>
+            <button class="control-btn" onclick="generateVideo()">Compile Video</button>
+            <button class="control-btn" onclick="refreshStatus()">Refresh Status</button>
+        </div>
+        
+        <div class="status-grid">
+            <div class="status-card">
+                <h3>Progress</h3>
+                <div class="status-value" id="progressValue">0 / 5376</div>
+                <div class="status-subtext" id="progressPercent">0%</div>
+            </div>
+            
+            <div class="status-card">
+                <h3>Days Completed</h3>
+                <div class="status-value" id="daysCompleted">0 / 56</div>
+                <div class="status-subtext">15-min intervals</div>
+            </div>
+            
+            <div class="status-card">
+                <h3>Current Frame</h3>
+                <div class="status-value" id="currentFrame">--</div>
+                <div class="status-subtext" id="frameTime">--</div>
+            </div>
+            
+            <div class="status-card">
+                <h3>Failures</h3>
+                <div class="status-value" id="failures">0</div>
+                <div class="status-subtext" id="failureRate">0% failure rate</div>
+            </div>
+            
+            <div class="status-card">
+                <h3>Fallbacks</h3>
+                <div class="status-value" id="fallbacks">0</div>
+                <div class="status-subtext" id="fallbackDetails">Corona: 0, Sun: 0</div>
+            </div>
+            
+            <div class="status-card">
+                <h3>Runtime</h3>
+                <div class="status-value" id="runtime">--:--</div>
+                <div class="status-subtext" id="speed">-- frames/min</div>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <h2>Overall Progress</h2>
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar" id="progressBar" style="width: 0%">
+                    0%
+                </div>
+            </div>
+            <p id="progressDetails">Ready to start generation</p>
+        </div>
+        
+        <div class="info-section">
+            <h2>Generation Info</h2>
+            <p><strong>Target:</strong> 5,376 frames (56 days × 96 frames/day)</p>
+            <p><strong>Video Duration:</strong> 3:44 at 24 FPS</p>
+            <p><strong>Resolution:</strong> 1460×1200 (73:60 aspect ratio)</p>
+            <p><strong>Features:</strong> Ad Astra color grading, feathered compositing</p>
+            <p><strong>Storage:</strong> Google Cloud Storage (heliosphere-solar project)</p>
+            
+            <div id="latestFrame" style="margin-top: 20px;"></div>
+        </div>
+        
+        <div class="refresh-info">
+            Auto-refresh every 10 seconds when running • Last update: <span id="lastUpdate">--</span>
+        </div>
+    </div>
+    
+    <script>
+        let autoRefreshInterval = null;
+        let currentStatus = null;
+        
+        async function fetchStatus() {
+            try {
+                // Add timestamp to prevent caching
+                const response = await fetch('/status?t=' + Date.now(), {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                const data = await response.json();
+                updateDisplay(data);
+                currentStatus = data;
+                return data;
+            } catch (error) {
+                console.error('Error fetching status:', error);
+            }
+        }
+        
+        function updateDisplay(data) {
+            // Update status indicator
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator ${data.status}`;
+            document.getElementById('statusText').textContent = 
+                data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            
+            // Update progress
+            document.getElementById('progressValue').textContent = 
+                `${data.completedFrames} / ${data.totalFrames}`;
+            document.getElementById('progressPercent').textContent = 
+                `${data.progress}%`;
+            
+            // Update days
+            const days = Math.floor(data.completedFrames / 96);
+            document.getElementById('daysCompleted').textContent = `${days} / 56`;
+            
+            // Update current frame
+            document.getElementById('currentFrame').textContent = 
+                data.currentFrame || '--';
+            
+            if (data.currentFrame && data.manifest && data.manifest.frames.length > 0) {
+                const lastFrame = data.manifest.frames[data.manifest.frames.length - 1];
+                document.getElementById('frameTime').textContent = 
+                    new Date(lastFrame.date).toLocaleString();
+            }
+            
+            // Update failures
+            document.getElementById('failures').textContent = data.failedFrames || 0;
+            const total = data.completedFrames + data.failedFrames;
+            const failureRate = total > 0 ? (data.failedFrames / total * 100).toFixed(1) : 0;
+            document.getElementById('failureRate').textContent = `${failureRate}% failure rate`;
+            
+            // Update fallbacks
+            const fallbackTotal = (data.fallbacks?.total || 0);
+            document.getElementById('fallbacks').textContent = fallbackTotal;
+            document.getElementById('fallbackDetails').textContent = 
+                `Corona: ${data.fallbacks?.corona || 0}, Sun: ${data.fallbacks?.sunDisk || 0}`;
+            
+            // Update runtime
+            if (data.runtime) {
+                const minutes = Math.floor(data.runtime / 60);
+                const seconds = Math.floor(data.runtime % 60);
+                document.getElementById('runtime').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                const speed = data.completedFrames / (data.runtime / 60);
+                document.getElementById('speed').textContent = 
+                    `${speed.toFixed(1)} frames/min`;
+            }
+            
+            // Update progress bar
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${data.progress}%`;
+            progressBar.textContent = `${data.progress}%`;
+            
+            // Update progress details
+            let details = `${data.completedFrames} frames completed`;
+            if (data.failedFrames > 0) {
+                details += `, ${data.failedFrames} failed`;
+            }
+            if (fallbackTotal > 0) {
+                details += `, ${fallbackTotal} used fallbacks`;
+            }
+            document.getElementById('progressDetails').textContent = details;
+            
+            // Update last update time
+            document.getElementById('lastUpdate').textContent = 
+                new Date().toLocaleTimeString();
+            
+            // Show latest frame if available
+            if (data.currentFrame > 0) {
+                const frameNum = (data.currentFrame - 1).toString().padStart(4, '0');
+                document.getElementById('latestFrame').innerHTML = 
+                    `<p><strong>Latest Frame:</strong> #${data.currentFrame}</p>
+                     <img src="/api/frame/${frameNum}" class="frame-preview" 
+                          onerror="this.style.display='none'" />`;
+            }
+            
+            // Auto-refresh management
+            if (data.status === 'running' && !autoRefreshInterval) {
+                autoRefreshInterval = setInterval(fetchStatus, 10000);
+            } else if (data.status !== 'running' && autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+        
+        async function startGeneration() {
+            if (confirm('Start full production generation (5,376 frames)?')) {
+                const response = await fetch('/generate', { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+                setTimeout(fetchStatus, 1000);
+            }
+        }
+        
+        async function startTest() {
+            const response = await fetch('/generate?frames=10', { method: 'POST' });
+            const result = await response.json();
+            alert(result.message);
+            setTimeout(fetchStatus, 1000);
+        }
+        
+        async function stopGeneration() {
+            if (confirm('Stop generation?')) {
+                const response = await fetch('/stop', { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+                setTimeout(fetchStatus, 1000);
+            }
+        }
+        
+        async function generateVideo() {
+            if (confirm('Compile video from current frames?')) {
+                alert('Video generation started. This may take several minutes...');
+                const response = await fetch('/compile-video', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Video ready: ${result.url}\nDuration: ${result.duration}`);
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            }
+        }
+        
+        function refreshStatus() {
+            fetchStatus();
+        }
+        
+        // Initial load
+        window.onload = () => {
+            fetchStatus();
+        };
+    </script>
+</body>
+</html>

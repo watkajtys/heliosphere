@@ -35,16 +35,20 @@ async function uploadToCloudflare(videoPath, name) {
     
     console.log(`📤 Uploading ${name} to Cloudflare Stream...`);
     
-    // Read video file
-    const videoBuffer = await fs.readFile(videoPath);
+    // Get file stats and create read stream
     const stats = await fs.stat(videoPath);
     console.log(`   File size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
     
+    // Use createReadStream for large files
+    const { createReadStream } = await import('fs');
+    const videoStream = createReadStream(videoPath);
+    
     // Create form data
     const form = new FormData();
-    form.append('file', videoBuffer, {
+    form.append('file', videoStream, {
         filename: `${name}.mp4`,
-        contentType: 'video/mp4'
+        contentType: 'video/mp4',
+        knownLength: stats.size
     });
     
     // Upload to Cloudflare
@@ -59,7 +63,17 @@ async function uploadToCloudflare(videoPath, name) {
         body: form
     });
     
-    const result = await response.json();
+    const responseText = await response.text();
+    
+    let result;
+    try {
+        result = JSON.parse(responseText);
+    } catch (error) {
+        console.error(`   Response status: ${response.status}`);
+        console.error(`   Response headers:`, response.headers);
+        console.error(`   Response body: ${responseText.substring(0, 500)}...`);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
+    }
     
     if (!result.success) {
         throw new Error(`Upload failed: ${JSON.stringify(result.errors)}`);

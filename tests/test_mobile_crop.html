@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Frame Crop Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        .control-group input {
+            width: 100%;
+            padding: 5px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+        }
+        
+        .value-display {
+            color: #FFD700;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .preview-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .preview-box {
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .preview-box h3 {
+            color: #FFD700;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        
+        .frame-container {
+            position: relative;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 10px;
+        }
+        
+        .frame-image {
+            position: absolute;
+        }
+        
+        .crop-overlay {
+            position: absolute;
+            border: 2px solid #FFD700;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.7);
+        }
+        
+        .info {
+            font-size: 0.85em;
+            color: #888;
+            line-height: 1.5;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            padding: 8px 15px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .preset-btn:hover {
+            background: #444;
+        }
+        
+        .preset-btn.active {
+            background: #FFD700;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Mobile Frame Crop Testing</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Crop Presets</label>
+                <div class="preset-buttons">
+                    <button class="preset-btn active" onclick="setCrop('current')">Current (1460×1200)</button>
+                    <button class="preset-btn" onclick="setCrop('square')">Square (1200×1200)</button>
+                    <button class="preset-btn" onclick="setCrop('portrait')">Portrait (900×1350)</button>
+                    <button class="preset-btn" onclick="setCrop('tight')">Tight (1000×1000)</button>
+                    <button class="preset-btn" onclick="setCrop('wide')">Wide (1600×1000)</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Crop Width</label>
+                <input type="range" id="cropWidth" min="800" max="1920" value="1460" oninput="updateCrop()">
+                <div class="value-display" id="widthValue">1460px</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Crop Height</label>
+                <input type="range" id="cropHeight" min="800" max="1435" value="1200" oninput="updateCrop()">
+                <div class="value-display" id="heightValue">1200px</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Horizontal Offset</label>
+                <input type="range" id="offsetX" min="-200" max="200" value="0" oninput="updateCrop()">
+                <div class="value-display" id="offsetXValue">0px</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Vertical Offset</label>
+                <input type="range" id="offsetY" min="-200" max="200" value="0" oninput="updateCrop()">
+                <div class="value-display" id="offsetYValue">0px</div>
+            </div>
+        </div>
+        
+        <div class="preview-container">
+            <!-- Original Frame -->
+            <div class="preview-box">
+                <h3>Original Frame (1460×1200)</h3>
+                <div class="frame-container" style="width: 365px; height: 300px;">
+                    <img class="frame-image" id="original" style="width: 365px;">
+                    <div class="crop-overlay" id="cropOverlay"></div>
+                </div>
+                <div class="info">
+                    <strong>Current Production</strong><br>
+                    Aspect: 1.22:1<br>
+                    Shows: Full corona
+                </div>
+            </div>
+            
+            <!-- Cropped Preview -->
+            <div class="preview-box">
+                <h3>Cropped Preview</h3>
+                <div class="frame-container" id="croppedContainer" style="width: 365px; height: 300px;">
+                    <img class="frame-image" id="cropped" style="width: 365px;">
+                </div>
+                <div class="info">
+                    <strong id="cropInfo">Custom Crop</strong><br>
+                    Aspect: <span id="aspectInfo">1.22:1</span><br>
+                    Size: <span id="sizeInfo">1460×1200</span>
+                </div>
+            </div>
+            
+            <!-- Phone Mock -->
+            <div class="preview-box">
+                <h3>iPhone Preview (390×844)</h3>
+                <div style="width: 195px; height: 422px; background: #111; border: 2px solid #333; border-radius: 20px; overflow: hidden; position: relative;">
+                    <div id="phoneCrop" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <img id="phonePreview" style="display: block;">
+                    </div>
+                </div>
+                <div class="info">
+                    Screen coverage: <span id="coverage">46%</span><br>
+                    With 5% margins: <span id="marginCoverage">41%</span>
+                </div>
+            </div>
+            
+            <!-- iPad Mock -->
+            <div class="preview-box">
+                <h3>iPad Preview (820×1180)</h3>
+                <div style="width: 273px; height: 393px; background: #111; border: 2px solid #333; border-radius: 20px; overflow: hidden; position: relative;">
+                    <div id="ipadCrop" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <img id="ipadPreview" style="display: block;">
+                    </div>
+                </div>
+                <div class="info">
+                    Screen coverage: <span id="ipadCoverage">70%</span><br>
+                    Better for tablets
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls" style="margin-top: 20px;">
+            <div class="control-group" style="flex: 100%;">
+                <label>Recommended Settings for Mobile</label>
+                <div class="info" style="background: #333; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                    <strong style="color: #FFD700;">Option 1: Square Crop (1200×1200)</strong><br>
+                    - Removes 130px from each side<br>
+                    - Perfect square works well on all devices<br>
+                    - Loses minimal corona detail<br>
+                    - 55% screen coverage on phones (vs 46% current)<br><br>
+                    
+                    <strong style="color: #FFD700;">Option 2: Portrait Crop (900×1350)</strong><br>
+                    - Optimized for phones<br>
+                    - 65% screen coverage<br>
+                    - Crops more corona but keeps sun prominent<br><br>
+                    
+                    <strong style="color: #FFD700;">Option 3: Keep Current + CSS Scale</strong><br>
+                    - No re-processing needed<br>
+                    - Use CSS to zoom 120% on mobile<br>
+                    - Some corona cropping but flexible
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Test with a local image first
+        const testImageUrl = 'test_frame.jpg';
+        
+        // Presets
+        const presets = {
+            current: { width: 1460, height: 1200, x: 0, y: 0 },
+            square: { width: 1200, height: 1200, x: 0, y: 0 },
+            portrait: { width: 900, height: 1350, x: 0, y: 0 },
+            tight: { width: 1000, height: 1000, x: 0, y: 0 },
+            wide: { width: 1600, height: 1000, x: 0, y: 0 }
+        };
+        
+        function setCrop(preset) {
+            const settings = presets[preset];
+            document.getElementById('cropWidth').value = settings.width;
+            document.getElementById('cropHeight').value = settings.height;
+            document.getElementById('offsetX').value = settings.x;
+            document.getElementById('offsetY').value = settings.y;
+            
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            updateCrop();
+        }
+        
+        function updateCrop() {
+            const width = parseInt(document.getElementById('cropWidth').value);
+            const height = parseInt(document.getElementById('cropHeight').value);
+            const offsetX = parseInt(document.getElementById('offsetX').value);
+            const offsetY = parseInt(document.getElementById('offsetY').value);
+            
+            // Update value displays
+            document.getElementById('widthValue').textContent = width + 'px';
+            document.getElementById('heightValue').textContent = height + 'px';
+            document.getElementById('offsetXValue').textContent = offsetX + 'px';
+            document.getElementById('offsetYValue').textContent = offsetY + 'px';
+            
+            // Calculate crop position (centered by default)
+            const left = (1460 - width) / 2 + offsetX;
+            const top = (1200 - height) / 2 + offsetY;
+            
+            // Update overlay on original
+            const overlay = document.getElementById('cropOverlay');
+            const scale = 365 / 1460; // Scale for preview
+            overlay.style.left = (left * scale) + 'px';
+            overlay.style.top = (top * scale) + 'px';
+            overlay.style.width = (width * scale) + 'px';
+            overlay.style.height = (height * scale) + 'px';
+            
+            // Update cropped preview
+            const cropped = document.getElementById('cropped');
+            const container = document.getElementById('croppedContainer');
+            const aspectRatio = width / height;
+            
+            if (aspectRatio > 1.22) {
+                // Wider than original
+                container.style.width = '365px';
+                container.style.height = (365 / aspectRatio) + 'px';
+                cropped.style.width = (365 * 1460 / width) + 'px';
+                cropped.style.left = (-left * 365 / width) + 'px';
+                cropped.style.top = (-top * 365 / width) + 'px';
+            } else {
+                // Taller than original
+                container.style.height = '300px';
+                container.style.width = (300 * aspectRatio) + 'px';
+                cropped.style.height = (300 * 1200 / height) + 'px';
+                cropped.style.width = 'auto';
+                cropped.style.left = (-left * 300 / height) + 'px';
+                cropped.style.top = (-top * 300 / height) + 'px';
+            }
+            
+            // Update info
+            document.getElementById('aspectInfo').textContent = (aspectRatio).toFixed(2) + ':1';
+            document.getElementById('sizeInfo').textContent = width + '×' + height;
+            
+            // Update phone preview
+            updatePhonePreview(width, height, aspectRatio);
+            updateIpadPreview(width, height, aspectRatio);
+        }
+        
+        function updatePhonePreview(cropWidth, cropHeight, aspectRatio) {
+            const phoneW = 195; // Half of 390
+            const phoneH = 422; // Half of 844
+            const preview = document.getElementById('phonePreview');
+            
+            // Calculate how video fits on phone
+            let videoW, videoH;
+            if (aspectRatio > phoneW/phoneH) {
+                // Video wider than phone
+                videoW = phoneW;
+                videoH = phoneW / aspectRatio;
+            } else {
+                // Video taller than phone
+                videoH = phoneH * 0.9; // 90% height (5% margins)
+                videoW = videoH * aspectRatio;
+            }
+            
+            preview.style.width = videoW + 'px';
+            preview.style.height = videoH + 'px';
+            
+            // Update coverage
+            const coverage = Math.round((videoH / phoneH) * 100);
+            document.getElementById('coverage').textContent = coverage + '%';
+            document.getElementById('marginCoverage').textContent = Math.round(coverage * 0.9) + '%';
+        }
+        
+        function updateIpadPreview(cropWidth, cropHeight, aspectRatio) {
+            const ipadW = 273; // Scaled
+            const ipadH = 393; // Scaled
+            const preview = document.getElementById('ipadPreview');
+            
+            let videoW, videoH;
+            if (aspectRatio > ipadW/ipadH) {
+                videoW = ipadW * 0.95;
+                videoH = videoW / aspectRatio;
+            } else {
+                videoH = ipadH * 0.9;
+                videoW = videoH * aspectRatio;
+            }
+            
+            preview.style.width = videoW + 'px';
+            preview.style.height = videoH + 'px';
+            
+            document.getElementById('ipadCoverage').textContent = 
+                Math.round((videoH / ipadH) * 100) + '%';
+        }
+        
+        // Load images
+        document.getElementById('original').src = testImageUrl;
+        document.getElementById('cropped').src = testImageUrl;
+        document.getElementById('phonePreview').src = testImageUrl;
+        document.getElementById('ipadPreview').src = testImageUrl;
+        
+        // Initialize
+        updateCrop();
+    </script>
+</body>
+</html>

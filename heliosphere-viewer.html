@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heliosphere - Daily Solar Timelapse</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            position: relative;
+            height: 100vh;
+        }
+        
+        .video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #000 100%);
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            max-width: 1460px;
+            max-height: 1200px;
+            border: none;
+            box-shadow: 0 0 100px rgba(255, 215, 0, 0.3);
+        }
+        
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+            z-index: 10;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+        }
+        
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9em;
+        }
+        
+        .toggle-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .toggle-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .toggle-btn.active {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            color: #000;
+            border-color: #FFD700;
+        }
+        
+        .info {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2em;
+            color: #FFD700;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .toggle-container {
+                bottom: 20px;
+                padding: 8px;
+            }
+            
+            .toggle-btn {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>☀️ Heliosphere</h1>
+        <p class="subtitle">Daily Solar Timelapse • Updated Every 24 Hours</p>
+    </div>
+    
+    <div class="video-container" id="videoContainer">
+        <div class="loading">Loading solar timelapse...</div>
+    </div>
+    
+    <div class="toggle-container">
+        <button class="toggle-btn active" onclick="switchVideo('full')">
+            Full (56 days)
+        </button>
+        <button class="toggle-btn" onclick="switchVideo('social')">
+            Social (30 days)
+        </button>
+    </div>
+    
+    <div class="info" id="info">
+        <span id="videoInfo">56 days of solar activity</span>
+    </div>
+    
+    <script>
+        // Cloudflare Stream configuration
+        const CLOUDFLARE_CONFIG = {
+            subdomain: 'customer-931z4aajcqul6afi.cloudflarestream.com',
+            videos: {
+                // These will be updated automatically when new videos are uploaded
+                // For now, using placeholder IDs - will be replaced with actual IDs
+                full: null,
+                social: null
+            }
+        };
+        
+        let currentVideo = 'full';
+        
+        // Load video IDs from server
+        async function loadVideoIds() {
+            try {
+                // In production, this would fetch from your API
+                const response = await fetch('/api/cloudflare-videos');
+                if (response.ok) {
+                    const data = await response.json();
+                    CLOUDFLARE_CONFIG.videos = data;
+                }
+            } catch (error) {
+                console.log('Using default video IDs');
+            }
+        }
+        
+        function switchVideo(type) {
+            currentVideo = type;
+            
+            // Update button states
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update info text
+            const infoText = type === 'full' 
+                ? '56 days of solar activity • 3:44 duration'
+                : '30 days of solar activity • 2:00 duration';
+            document.getElementById('videoInfo').textContent = infoText;
+            
+            // Load video
+            loadVideo(type);
+        }
+        
+        function loadVideo(type) {
+            const container = document.getElementById('videoContainer');
+            const videoId = CLOUDFLARE_CONFIG.videos[type];
+            
+            if (!videoId) {
+                container.innerHTML = `
+                    <div class="loading">
+                        Video will be available after daily generation completes
+                    </div>
+                `;
+                return;
+            }
+            
+            // Create Cloudflare Stream iframe
+            const embedUrl = `https://${CLOUDFLARE_CONFIG.subdomain}/${videoId}/iframe`;
+            
+            container.innerHTML = `
+                <iframe
+                    src="${embedUrl}?autoplay=true&loop=true&muted=true&preload=auto&controls=true"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                    allowfullscreen>
+                </iframe>
+            `;
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', async () => {
+            await loadVideoIds();
+            loadVideo('full');
+        });
+        
+        // For local testing with direct video files
+        function loadTestVideo(videoUrl) {
+            const container = document.getElementById('videoContainer');
+            container.innerHTML = `
+                <video 
+                    style="width: 100%; height: 100%; max-width: 1460px; max-height: 1200px;"
+                    autoplay 
+                    loop 
+                    muted 
+                    controls>
+                    <source src="${videoUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+        }
+        
+        // Check if we're in test mode (local file or specific parameter)
+        if (window.location.protocol === 'file:' || window.location.search.includes('test=true')) {
+            // For testing, load local video
+            document.getElementById('videoInfo').textContent = 'Test Mode - Local Video';
+            loadTestVideo('test_full_video.mp4');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Heliosphere - Live Solar Corona</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        .video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FFD700;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 1.2em;
+            text-align: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container" id="videoContainer">
+        <div class="loading">☀️</div>
+    </div>
+    
+    <script>
+        // Video IDs from Cloudflare
+        const VIDEO_IDS = {
+            desktop: '95ecc96fa10047fa8a127aee889b8a85',
+            mobile: '4f9b49da936443f9bc73a2ed22fe3092'
+        };
+        
+        const CLOUDFLARE_SUBDOMAIN = 'customer-931z4aajcqul6afi.cloudflarestream.com';
+        
+        function detectDevice() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const aspectRatio = window.innerWidth / window.innerHeight;
+            
+            // Use mobile video for:
+            // 1. Mobile devices in portrait
+            // 2. Any device with portrait aspect ratio < 0.75 (taller than 3:4)
+            if ((isMobile && isPortrait) || aspectRatio < 0.75) {
+                return 'mobile';
+            }
+            
+            return 'desktop';
+        }
+        
+        function loadVideo() {
+            const device = detectDevice();
+            const videoId = VIDEO_IDS[device];
+            const container = document.getElementById('videoContainer');
+            
+            console.log(`Loading ${device} video: ${videoId}`);
+            
+            // Create iframe with autoplay, loop, no controls, muted (for autoplay to work)
+            // Quality is automatically highest available in Cloudflare Stream
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://${CLOUDFLARE_SUBDOMAIN}/${videoId}/iframe?autoplay=true&loop=true&muted=true&controls=false&defaultTextTrack=off&preload=auto`;
+            iframe.allow = 'accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;';
+            iframe.allowFullscreen = true;
+            iframe.setAttribute('loading', 'eager');
+            
+            // Clear container and add iframe
+            container.innerHTML = '';
+            container.appendChild(iframe);
+        }
+        
+        // Load video on page load
+        window.addEventListener('DOMContentLoaded', loadVideo);
+        
+        // Reload on orientation change (with debouncing)
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const newDevice = detectDevice();
+                const currentSrc = document.querySelector('iframe')?.src || '';
+                const currentId = currentSrc.match(/\/([a-f0-9]{32})\/iframe/)?.[1];
+                
+                // Only reload if device type changed
+                if (currentId && currentId !== VIDEO_IDS[newDevice]) {
+                    loadVideo();
+                }
+            }, 250);
+        });
+        
+        // Prevent zoom on double tap (mobile)
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        });
+        
+        // Prevent right-click context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+    </script>
+</body>
+</html>

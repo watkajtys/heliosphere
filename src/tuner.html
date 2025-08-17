@@ -1,72 +1,589 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Solar Composite Tuner</title>
+    <title>Solar Composite Tuner with Crop Preview</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; margin: 20px; background: #1a1a1a; color: #eee; }
-        .container { max-width: 1200px; margin: 0 auto; text-align: center;}
-        .controls { background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: inline-block; }
-        .control-group { margin-bottom: 15px; text-align: left; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .controls { background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .control-group { margin-bottom: 15px; }
         .control-group label { display: block; margin-bottom: 10px; font-size: 16px; }
-        .slider { width: 400px; accent-color: #50fa7b; }
+        .slider { width: 300px; accent-color: #50fa7b; }
         .value-display { font-weight: bold; color: #50fa7b; padding: 2px 6px; background: #444; border-radius: 4px; }
-        img { max-width: 100%; border: 2px solid #555; border-radius: 4px; background: #000; margin-top: 20px; }
-        h1 { color: #ffb86c; }
+        .images-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .image-wrapper { background: #222; padding: 15px; border-radius: 8px; }
+        .image-wrapper h3 { color: #ffb86c; margin: 0 0 10px 0; }
+        .image-wrapper img { width: 100%; border: 2px solid #555; border-radius: 4px; background: #000; display: block; }
+        .crop-overlay { position: relative; display: inline-block; width: 100%; }
+        .crop-overlay canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border-radius: 4px; }
+        h1 { color: #ffb86c; text-align: center; }
+        .control-section { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .info { background: #2a2a2a; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px; }
+        .info span { color: #8be9fd; }
+        .crop-controls { border-left: 3px solid #ff79c6; padding-left: 20px; }
+        .feather-controls { border-left: 3px solid #50fa7b; padding-left: 20px; }
+        .corona-controls { border-left: 3px solid #8be9fd; padding-left: 20px; }
+        .sundisk-controls { border-left: 3px solid #f1fa8c; padding-left: 20px; }
+        .quality-controls { border-left: 3px solid #ff79c6; padding-left: 20px; }
+        .preset-controls { border-left: 3px solid #bd93f9; padding-left: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Simple Solar Composite Tuner</h1>
+        <h1>Solar Composite Tuner with Crop Preview</h1>
 
         <div class="controls">
-            <div class="control-group">
-                <label for="compositeRadiusSlider">Composite Radius: <span id="compositeRadiusValue" class="value-display">600</span>px</label>
-                <input type="range" id="compositeRadiusSlider" class="slider" min="400" max="800" value="600" step="5">
+            <div class="control-section">
+                <div class="feather-controls">
+                    <h3 style="color: #50fa7b;">Feathering Controls</h3>
+                    <div class="control-group">
+                        <label>Feathering Shape: Square (Fixed)</label>
+                        <div style="margin: 10px 0; color: #50fa7b;">
+                            ✓ Square feathering enabled for dramatic effect
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="compositeRadiusSlider">Composite Radius: <span id="compositeRadiusValue" class="value-display">400</span>px</label>
+                        <input type="range" id="compositeRadiusSlider" class="slider" min="300" max="700" value="400" step="5">
+                    </div>
+                    <div class="control-group">
+                        <label for="featherRadiusSlider">Feather Radius: <span id="featherRadiusValue" class="value-display">40</span>px</label>
+                        <input type="range" id="featherRadiusSlider" class="slider" min="0" max="150" value="40" step="1">
+                    </div>
+                </div>
+                
+                <div class="crop-controls">
+                    <h3 style="color: #ff79c6;">Crop Controls (from 1920x1435)</h3>
+                    <div class="control-group">
+                        <label for="cropTopSlider">Crop Top: <span id="cropTopValue" class="value-display">117</span>px</label>
+                        <input type="range" id="cropTopSlider" class="slider" min="0" max="235" value="117" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="cropBottomSlider">Crop Bottom: <span id="cropBottomValue" class="value-display">118</span>px</label>
+                        <input type="range" id="cropBottomSlider" class="slider" min="0" max="235" value="118" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="cropLeftSlider">Crop Left: <span id="cropLeftValue" class="value-display">230</span>px</label>
+                        <input type="range" id="cropLeftSlider" class="slider" min="0" max="400" value="230" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="cropRightSlider">Crop Right: <span id="cropRightValue" class="value-display">230</span>px</label>
+                        <input type="range" id="cropRightSlider" class="slider" min="0" max="400" value="230" step="1">
+                    </div>
+                    <div class="info">
+                        Final Size: <span id="finalSize">1460 x 1200</span> | 
+                        Aspect Ratio: <span id="aspectRatio">73:60</span>
+                    </div>
+                </div>
             </div>
-            <div class="control-group">
-                <label for="featherRadiusSlider">Feather Radius: <span id="featherRadiusValue" class="value-display">40</span>px</label>
-                <input type="range" id="featherRadiusSlider" class="slider" min="0" max="150" value="40" step="1">
+            
+            <!-- Color Grading Controls -->
+            <div class="control-section" style="margin-top: 20px;">
+                <div class="corona-controls">
+                    <h3 style="color: #8be9fd;">Corona Color Grading</h3>
+                    <div class="control-group">
+                        <label for="coronaSaturationSlider">Saturation: <span id="coronaSaturationValue" class="value-display">0.2</span></label>
+                        <input type="range" id="coronaSaturationSlider" class="slider" min="0" max="2" value="0.2" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label for="coronaBrightnessSlider">Brightness: <span id="coronaBrightnessValue" class="value-display">1.0</span></label>
+                        <input type="range" id="coronaBrightnessSlider" class="slider" min="0.5" max="1.5" value="1.0" step="0.05">
+                    </div>
+                    <div class="control-group">
+                        <label for="coronaHueSlider">Hue: <span id="coronaHueValue" class="value-display">-12</span>°</label>
+                        <input type="range" id="coronaHueSlider" class="slider" min="-30" max="30" value="-12" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="coronaLinearMultSlider">Linear Multiplier: <span id="coronaLinearMultValue" class="value-display">1.0</span></label>
+                        <input type="range" id="coronaLinearMultSlider" class="slider" min="0.5" max="2" value="1.0" step="0.05">
+                    </div>
+                    <div class="control-group">
+                        <label for="coronaLinearOffsetSlider">Linear Offset: <span id="coronaLinearOffsetValue" class="value-display">0</span></label>
+                        <input type="range" id="coronaLinearOffsetSlider" class="slider" min="-50" max="50" value="0" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="coronaGammaSlider">Gamma: <span id="coronaGammaValue" class="value-display">1.6</span></label>
+                        <input type="range" id="coronaGammaSlider" class="slider" min="0.5" max="2.5" value="1.6" step="0.05">
+                    </div>
+                </div>
+                
+                <div class="sundisk-controls">
+                    <h3 style="color: #f1fa8c;">Sun Disk Color Grading</h3>
+                    <div class="control-group">
+                        <label for="sundiskSaturationSlider">Saturation: <span id="sundiskSaturationValue" class="value-display">1.8</span></label>
+                        <input type="range" id="sundiskSaturationSlider" class="slider" min="0" max="2" value="1.8" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label for="sundiskBrightnessSlider">Brightness: <span id="sundiskBrightnessValue" class="value-display">1.0</span></label>
+                        <input type="range" id="sundiskBrightnessSlider" class="slider" min="0.5" max="1.5" value="1.0" step="0.05">
+                    </div>
+                    <div class="control-group">
+                        <label for="sundiskHueSlider">Hue: <span id="sundiskHueValue" class="value-display">25</span>°</label>
+                        <input type="range" id="sundiskHueSlider" class="slider" min="-30" max="30" value="25" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="sundiskLinearMultSlider">Linear Multiplier: <span id="sundiskLinearMultValue" class="value-display">1.0</span></label>
+                        <input type="range" id="sundiskLinearMultSlider" class="slider" min="0.5" max="2" value="1.0" step="0.05">
+                    </div>
+                    <div class="control-group">
+                        <label for="sundiskLinearOffsetSlider">Linear Offset: <span id="sundiskLinearOffsetValue" class="value-display">0</span></label>
+                        <input type="range" id="sundiskLinearOffsetSlider" class="slider" min="-50" max="50" value="0" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="sundiskGammaSlider">Gamma: <span id="sundiskGammaValue" class="value-display">0.7</span></label>
+                        <input type="range" id="sundiskGammaSlider" class="slider" min="0.5" max="2.5" value="0.7" step="0.05">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quality and Blend Controls -->
+            <div class="control-section" style="margin-top: 20px;">
+                <div class="quality-controls">
+                    <h3 style="color: #ff79c6;">Quality & Blend Settings</h3>
+                    <div class="control-group">
+                        <label for="qualitySlider">JPEG Quality: <span id="qualityValue" class="value-display">100</span>%</label>
+                        <input type="range" id="qualitySlider" class="slider" min="90" max="100" value="100" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="formatSelect">Output Format:</label>
+                        <select id="formatSelect" style="margin-left: 10px; padding: 5px; background: #333; color: #eee; border: 1px solid #555;">
+                            <option value="jpeg">JPEG</option>
+                            <option value="png" selected>PNG (Lossless)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="blendModeSelect">Blend Mode:</label>
+                        <select id="blendModeSelect" style="margin-left: 10px; padding: 5px; background: #333; color: #eee; border: 1px solid #555;">
+                            <option value="screen">Screen</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="overlay" selected>Overlay</option>
+                            <option value="normal">Normal</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="preset-controls">
+                    <h3 style="color: #bd93f9;">Presets</h3>
+                    <div class="control-group">
+                        <button id="savePresetBtn" style="padding: 10px 15px; background: #50fa7b; color: #000; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer;">Save Current</button>
+                        <button id="loadPresetBtn" style="padding: 10px 15px; background: #8be9fd; color: #000; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer;">Load Default</button>
+                        <button id="exportSettingsBtn" style="padding: 10px 15px; background: #ffb86c; color: #000; border: none; border-radius: 4px; cursor: pointer;">Export Settings</button>
+                    </div>
+                    <div class="info" style="margin-top: 10px;">
+                        <strong>Warning:</strong> High linear multipliers and brightness can cause highlight clipping. 
+                        Use PNG format for lossless quality.
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="image-container">
-            <img id="compositeImg" src="/composite-image?compositeRadius=600&featherRadius=40" alt="Loading composite image...">
+        <div class="images-container">
+            <div class="image-wrapper">
+                <h3>Full Composite (1920x1435) with Crop Overlay</h3>
+                <div class="crop-overlay">
+                    <img id="compositeImg" src="/composite-image?compositeRadius=400&featherRadius=40" alt="Loading composite image...">
+                    <canvas id="cropOverlay"></canvas>
+                </div>
+                <div class="info">
+                    Original: <span>1920 x 1435</span> | Shows crop area in red
+                </div>
+            </div>
+            
+            <div class="image-wrapper">
+                <h3>Cropped Preview (Final Output)</h3>
+                <canvas id="croppedPreview"></canvas>
+                <div class="info">
+                    Cropped: <span id="croppedSize">1460 x 1200</span> | This is what goes in the video
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        // Get all controls
         const compositeRadiusSlider = document.getElementById('compositeRadiusSlider');
         const compositeRadiusValue = document.getElementById('compositeRadiusValue');
         const featherRadiusSlider = document.getElementById('featherRadiusSlider');
         const featherRadiusValue = document.getElementById('featherRadiusValue');
+        
+        // Square feathering is now fixed/hardcoded
+        
+        // Color grading controls - Corona
+        const coronaSaturationSlider = document.getElementById('coronaSaturationSlider');
+        const coronaSaturationValue = document.getElementById('coronaSaturationValue');
+        const coronaBrightnessSlider = document.getElementById('coronaBrightnessSlider');
+        const coronaBrightnessValue = document.getElementById('coronaBrightnessValue');
+        const coronaHueSlider = document.getElementById('coronaHueSlider');
+        const coronaHueValue = document.getElementById('coronaHueValue');
+        const coronaLinearMultSlider = document.getElementById('coronaLinearMultSlider');
+        const coronaLinearMultValue = document.getElementById('coronaLinearMultValue');
+        const coronaLinearOffsetSlider = document.getElementById('coronaLinearOffsetSlider');
+        const coronaLinearOffsetValue = document.getElementById('coronaLinearOffsetValue');
+        const coronaGammaSlider = document.getElementById('coronaGammaSlider');
+        const coronaGammaValue = document.getElementById('coronaGammaValue');
+        
+        // Color grading controls - Sun Disk
+        const sundiskSaturationSlider = document.getElementById('sundiskSaturationSlider');
+        const sundiskSaturationValue = document.getElementById('sundiskSaturationValue');
+        const sundiskBrightnessSlider = document.getElementById('sundiskBrightnessSlider');
+        const sundiskBrightnessValue = document.getElementById('sundiskBrightnessValue');
+        const sundiskHueSlider = document.getElementById('sundiskHueSlider');
+        const sundiskHueValue = document.getElementById('sundiskHueValue');
+        const sundiskLinearMultSlider = document.getElementById('sundiskLinearMultSlider');
+        const sundiskLinearMultValue = document.getElementById('sundiskLinearMultValue');
+        const sundiskLinearOffsetSlider = document.getElementById('sundiskLinearOffsetSlider');
+        const sundiskLinearOffsetValue = document.getElementById('sundiskLinearOffsetValue');
+        const sundiskGammaSlider = document.getElementById('sundiskGammaSlider');
+        const sundiskGammaValue = document.getElementById('sundiskGammaValue');
+        
+        // Quality controls
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
+        const formatSelect = document.getElementById('formatSelect');
+        const blendModeSelect = document.getElementById('blendModeSelect');
+        
+        const cropTopSlider = document.getElementById('cropTopSlider');
+        const cropTopValue = document.getElementById('cropTopValue');
+        const cropBottomSlider = document.getElementById('cropBottomSlider');
+        const cropBottomValue = document.getElementById('cropBottomValue');
+        const cropLeftSlider = document.getElementById('cropLeftSlider');
+        const cropLeftValue = document.getElementById('cropLeftValue');
+        const cropRightSlider = document.getElementById('cropRightSlider');
+        const cropRightValue = document.getElementById('cropRightValue');
+        
         const compositeImg = document.getElementById('compositeImg');
+        const cropOverlay = document.getElementById('cropOverlay');
+        const croppedPreview = document.getElementById('croppedPreview');
+        const finalSizeSpan = document.getElementById('finalSize');
+        const croppedSizeSpan = document.getElementById('croppedSize');
+        const aspectRatioSpan = document.getElementById('aspectRatio');
+
+        function updateCropOverlay() {
+            const cropTop = parseInt(cropTopSlider.value);
+            const cropBottom = parseInt(cropBottomSlider.value);
+            const cropLeft = parseInt(cropLeftSlider.value);
+            const cropRight = parseInt(cropRightSlider.value);
+            
+            // Calculate final dimensions
+            const finalWidth = 1920 - cropLeft - cropRight;
+            const finalHeight = 1435 - cropTop - cropBottom;
+            
+            // Update size displays
+            finalSizeSpan.textContent = `${finalWidth} x ${finalHeight}`;
+            croppedSizeSpan.textContent = `${finalWidth} x ${finalHeight}`;
+            
+            // Calculate aspect ratio
+            const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+            const divisor = gcd(finalWidth, finalHeight);
+            aspectRatioSpan.textContent = `${finalWidth/divisor}:${finalHeight/divisor}`;
+            
+            // Draw crop overlay
+            const rect = compositeImg.getBoundingClientRect();
+            cropOverlay.width = rect.width;
+            cropOverlay.height = rect.height;
+            
+            const ctx = cropOverlay.getContext('2d');
+            ctx.clearRect(0, 0, cropOverlay.width, cropOverlay.height);
+            
+            // Scale factors for display
+            const scaleX = rect.width / 1920;
+            const scaleY = rect.height / 1435;
+            
+            // Draw semi-transparent overlay for cropped areas
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            
+            // Top crop area
+            if (cropTop > 0) {
+                ctx.fillRect(0, 0, rect.width, cropTop * scaleY);
+            }
+            
+            // Bottom crop area
+            if (cropBottom > 0) {
+                ctx.fillRect(0, rect.height - cropBottom * scaleY, rect.width, cropBottom * scaleY);
+            }
+            
+            // Left crop area
+            if (cropLeft > 0) {
+                ctx.fillRect(0, cropTop * scaleY, cropLeft * scaleX, (1435 - cropTop - cropBottom) * scaleY);
+            }
+            
+            // Right crop area
+            if (cropRight > 0) {
+                ctx.fillRect(rect.width - cropRight * scaleX, cropTop * scaleY, cropRight * scaleX, (1435 - cropTop - cropBottom) * scaleY);
+            }
+            
+            // Draw crop boundary
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(
+                cropLeft * scaleX,
+                cropTop * scaleY,
+                (1920 - cropLeft - cropRight) * scaleX,
+                (1435 - cropTop - cropBottom) * scaleY
+            );
+            
+            // Update cropped preview
+            updateCroppedPreview();
+        }
+
+        function updateCroppedPreview() {
+            const cropTop = parseInt(cropTopSlider.value);
+            const cropBottom = parseInt(cropBottomSlider.value);
+            const cropLeft = parseInt(cropLeftSlider.value);
+            const cropRight = parseInt(cropRightSlider.value);
+            
+            const finalWidth = 1920 - cropLeft - cropRight;
+            const finalHeight = 1435 - cropTop - cropBottom;
+            
+            // Set canvas size to match aspect ratio
+            const maxDisplayWidth = 650; // Max width for display
+            const scale = Math.min(1, maxDisplayWidth / finalWidth);
+            
+            croppedPreview.width = finalWidth * scale;
+            croppedPreview.height = finalHeight * scale;
+            
+            const ctx = croppedPreview.getContext('2d');
+            
+            // Draw the cropped portion of the image
+            if (compositeImg.complete && compositeImg.naturalHeight !== 0) {
+                ctx.drawImage(
+                    compositeImg,
+                    cropLeft, cropTop, finalWidth, finalHeight,  // Source rectangle
+                    0, 0, croppedPreview.width, croppedPreview.height  // Destination rectangle
+                );
+            }
+        }
 
         function updateImage() {
             const compositeRadius = compositeRadiusSlider.value;
             const featherRadius = featherRadiusSlider.value;
+            const featherShape = 'square';
+            
+            // Color grading parameters
+            const coronaParams = {
+                saturation: coronaSaturationSlider.value,
+                brightness: coronaBrightnessSlider.value,
+                hue: coronaHueSlider.value,
+                linearMult: coronaLinearMultSlider.value,
+                linearOffset: coronaLinearOffsetSlider.value,
+                gamma: coronaGammaSlider.value
+            };
+            
+            const sundiskParams = {
+                saturation: sundiskSaturationSlider.value,
+                brightness: sundiskBrightnessSlider.value,
+                hue: sundiskHueSlider.value,
+                linearMult: sundiskLinearMultSlider.value,
+                linearOffset: sundiskLinearOffsetSlider.value,
+                gamma: sundiskGammaSlider.value
+            };
+            
+            const qualityParams = {
+                quality: qualitySlider.value,
+                format: formatSelect.value,
+                blendMode: blendModeSelect.value
+            };
 
             compositeRadiusValue.textContent = compositeRadius;
             featherRadiusValue.textContent = featherRadius;
 
-            // Add a timestamp to the URL to force the browser to reload the image
-            const timestamp = Date.now();
-            compositeImg.src = `/composite-image?compositeRadius=${compositeRadius}&featherRadius=${featherRadius}&t=${timestamp}`;
-        }
+            // Build query string with all parameters
+            const params = new URLSearchParams({
+                compositeRadius,
+                featherRadius,
+                featherShape,
+                ...Object.fromEntries(Object.entries(coronaParams).map(([k, v]) => [`corona_${k}`, v])),
+                ...Object.fromEntries(Object.entries(sundiskParams).map(([k, v]) => [`sundisk_${k}`, v])),
+                ...qualityParams,
+                t: Date.now()
+            });
 
-        // Update the text display in real-time as the slider moves
+            compositeImg.src = `/composite-image?${params.toString()}`;
+        }
+        
+
+        // Update value displays in real-time
         compositeRadiusSlider.addEventListener('input', () => {
             compositeRadiusValue.textContent = compositeRadiusSlider.value;
         });
         featherRadiusSlider.addEventListener('input', () => {
             featherRadiusValue.textContent = featherRadiusSlider.value;
         });
+        
+        
+        // Corona color grading controls
+        coronaSaturationSlider.addEventListener('input', () => {
+            coronaSaturationValue.textContent = coronaSaturationSlider.value;
+        });
+        coronaBrightnessSlider.addEventListener('input', () => {
+            coronaBrightnessValue.textContent = coronaBrightnessSlider.value;
+        });
+        coronaHueSlider.addEventListener('input', () => {
+            coronaHueValue.textContent = coronaHueSlider.value;
+        });
+        coronaLinearMultSlider.addEventListener('input', () => {
+            coronaLinearMultValue.textContent = coronaLinearMultSlider.value;
+        });
+        coronaLinearOffsetSlider.addEventListener('input', () => {
+            coronaLinearOffsetValue.textContent = coronaLinearOffsetSlider.value;
+        });
+        coronaGammaSlider.addEventListener('input', () => {
+            coronaGammaValue.textContent = coronaGammaSlider.value;
+        });
+        
+        // Sun disk color grading controls
+        sundiskSaturationSlider.addEventListener('input', () => {
+            sundiskSaturationValue.textContent = sundiskSaturationSlider.value;
+        });
+        sundiskBrightnessSlider.addEventListener('input', () => {
+            sundiskBrightnessValue.textContent = sundiskBrightnessSlider.value;
+        });
+        sundiskHueSlider.addEventListener('input', () => {
+            sundiskHueValue.textContent = sundiskHueSlider.value;
+        });
+        sundiskLinearMultSlider.addEventListener('input', () => {
+            sundiskLinearMultValue.textContent = sundiskLinearMultSlider.value;
+        });
+        sundiskLinearOffsetSlider.addEventListener('input', () => {
+            sundiskLinearOffsetValue.textContent = sundiskLinearOffsetSlider.value;
+        });
+        sundiskGammaSlider.addEventListener('input', () => {
+            sundiskGammaValue.textContent = sundiskGammaSlider.value;
+        });
+        
+        // Quality controls
+        qualitySlider.addEventListener('input', () => {
+            qualityValue.textContent = qualitySlider.value;
+        });
+        
+        cropTopSlider.addEventListener('input', () => {
+            cropTopValue.textContent = cropTopSlider.value;
+            updateCropOverlay();
+        });
+        cropBottomSlider.addEventListener('input', () => {
+            cropBottomValue.textContent = cropBottomSlider.value;
+            updateCropOverlay();
+        });
+        cropLeftSlider.addEventListener('input', () => {
+            cropLeftValue.textContent = cropLeftSlider.value;
+            updateCropOverlay();
+        });
+        cropRightSlider.addEventListener('input', () => {
+            cropRightValue.textContent = cropRightSlider.value;
+            updateCropOverlay();
+        });
 
-        // Update the image only when the user has finished changing the value (releases the slider)
-        // This prevents sending too many requests to the server.
+        // Update image on slider release
         compositeRadiusSlider.addEventListener('change', updateImage);
         featherRadiusSlider.addEventListener('change', updateImage);
+        
+        // Square feathering is fixed - no shape selection needed
+        
+        // Corona color grading updates
+        coronaSaturationSlider.addEventListener('change', updateImage);
+        coronaBrightnessSlider.addEventListener('change', updateImage);
+        coronaHueSlider.addEventListener('change', updateImage);
+        coronaLinearMultSlider.addEventListener('change', updateImage);
+        coronaLinearOffsetSlider.addEventListener('change', updateImage);
+        coronaGammaSlider.addEventListener('change', updateImage);
+        
+        // Sun disk color grading updates
+        sundiskSaturationSlider.addEventListener('change', updateImage);
+        sundiskBrightnessSlider.addEventListener('change', updateImage);
+        sundiskHueSlider.addEventListener('change', updateImage);
+        sundiskLinearMultSlider.addEventListener('change', updateImage);
+        sundiskLinearOffsetSlider.addEventListener('change', updateImage);
+        sundiskGammaSlider.addEventListener('change', updateImage);
+        
+        // Quality and format updates
+        qualitySlider.addEventListener('change', updateImage);
+        formatSelect.addEventListener('change', updateImage);
+        blendModeSelect.addEventListener('change', updateImage);
+        
+        // Preset functionality
+        document.getElementById('savePresetBtn').addEventListener('click', () => {
+            const settings = {
+                featherShape: 'square',
+                compositeRadius: compositeRadiusSlider.value,
+                featherRadius: featherRadiusSlider.value,
+                squareWidth: squareWidthSlider.value,
+                squareHeight: squareHeightSlider.value,
+                cornerRadius: cornerRadiusSlider.value,
+                corona: {
+                    saturation: coronaSaturationSlider.value,
+                    brightness: coronaBrightnessSlider.value,
+                    hue: coronaHueSlider.value,
+                    linearMult: coronaLinearMultSlider.value,
+                    linearOffset: coronaLinearOffsetSlider.value,
+                    gamma: coronaGammaSlider.value
+                },
+                sundisk: {
+                    saturation: sundiskSaturationSlider.value,
+                    brightness: sundiskBrightnessSlider.value,
+                    hue: sundiskHueSlider.value,
+                    linearMult: sundiskLinearMultSlider.value,
+                    linearOffset: sundiskLinearOffsetSlider.value,
+                    gamma: sundiskGammaSlider.value
+                },
+                quality: qualitySlider.value,
+                format: formatSelect.value,
+                blendMode: blendModeSelect.value
+            };
+            localStorage.setItem('heliosphere_preset', JSON.stringify(settings));
+            alert('Settings saved to browser storage');
+        });
+        
+        document.getElementById('exportSettingsBtn').addEventListener('click', () => {
+            const settings = {
+                // Optimized settings to preserve highlights
+                corona: {
+                    saturation: parseFloat(coronaSaturationSlider.value),
+                    brightness: parseFloat(coronaBrightnessSlider.value),
+                    hue: parseInt(coronaHueSlider.value),
+                    linearMult: parseFloat(coronaLinearMultSlider.value),
+                    linearOffset: parseInt(coronaLinearOffsetSlider.value),
+                    gamma: parseFloat(coronaGammaSlider.value)
+                },
+                sundisk: {
+                    saturation: parseFloat(sundiskSaturationSlider.value),
+                    brightness: parseFloat(sundiskBrightnessSlider.value),
+                    hue: parseInt(sundiskHueSlider.value),
+                    linearMult: parseFloat(sundiskLinearMultSlider.value),
+                    linearOffset: parseInt(sundiskLinearOffsetSlider.value),
+                    gamma: parseFloat(sundiskGammaSlider.value)
+                },
+                feathering: {
+                    shape: 'square',
+                    radius: parseInt(featherRadiusSlider.value),
+                    compositeRadius: parseInt(compositeRadiusSlider.value),
+                    squareWidth: parseInt(squareWidthSlider.value),
+                    squareHeight: parseInt(squareHeightSlider.value),
+                    cornerRadius: parseInt(cornerRadiusSlider.value)
+                },
+                quality: {
+                    format: formatSelect.value,
+                    jpegQuality: parseInt(qualitySlider.value),
+                    blendMode: blendModeSelect.value
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'heliosphere_color_settings.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
 
-        // No need for an initial call to updateImage() since the <img> tag's src is already set with default values.
+        // Update crop overlay when image loads
+        compositeImg.addEventListener('load', () => {
+            updateCropOverlay();
+        });
+
+        // Initial crop overlay
+        setTimeout(updateCropOverlay, 100);
     </script>
 </body>
 </html>

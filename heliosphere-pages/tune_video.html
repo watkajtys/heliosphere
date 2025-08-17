@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heliosphere Video Tuning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+        
+        /* Controls Panel */
+        .controls {
+            width: 320px;
+            background: #222;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #444;
+        }
+        
+        .controls h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .value-display {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            padding: 8px 12px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .preset-btn:hover {
+            background: #444;
+        }
+        
+        .preset-btn.active {
+            background: #FFD700;
+            color: #000;
+        }
+        
+        /* Preview Area */
+        .preview-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #000;
+        }
+        
+        .device-frame {
+            position: relative;
+            background: #111;
+            border: 2px solid #333;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .device-screen {
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        #video-preview {
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+        
+        /* Info Display */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            min-width: 200px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .info-label {
+            color: #888;
+        }
+        
+        .info-value {
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        /* Code Output */
+        .code-output {
+            background: #111;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            color: #4CAF50;
+            margin-top: 10px;
+        }
+        
+        .toggle-section {
+            cursor: pointer;
+            user-select: none;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .toggle-section:hover {
+            background: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h2>🎛️ Video Tuning Controls</h2>
+        
+        <div class="control-group">
+            <label>Device Preset</label>
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="setDevice('iphone')">iPhone</button>
+                <button class="preset-btn" onclick="setDevice('ipad')">iPad</button>
+                <button class="preset-btn" onclick="setDevice('desktop')">Desktop</button>
+                <button class="preset-btn" onclick="setDevice('custom')">Custom</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Margin/Padding (%)</label>
+            <input type="range" id="margin" min="0" max="20" value="5" step="1">
+            <div class="value-display">
+                Top/Bottom: <span id="margin-value">5</span>%
+                <br>Video Height: <span id="height-value">90</span>%
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Video Scale (%)</label>
+            <input type="range" id="scale" min="80" max="150" value="100" step="5">
+            <div class="value-display">
+                Scale: <span id="scale-value">100</span>%
+                <br><span id="crop-info">No cropping</span>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Aspect Ratio Mode</label>
+            <div class="preset-buttons">
+                <button class="preset-btn aspect-btn active" onclick="setAspect('original')">
+                    Original<br>1460×1200
+                </button>
+                <button class="preset-btn aspect-btn" onclick="setAspect('square')">
+                    Square<br>1200×1200
+                </button>
+                <button class="preset-btn aspect-btn" onclick="setAspect('portrait')">
+                    Portrait<br>1000×1400
+                </button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Custom Device Size</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="custom-width" placeholder="Width" value="390" style="flex: 1; padding: 5px;">
+                <input type="number" id="custom-height" placeholder="Height" value="844" style="flex: 1; padding: 5px;">
+            </div>
+            <button class="preset-btn" onclick="applyCustomSize()" style="margin-top: 10px; width: 100%;">
+                Apply Custom Size
+            </button>
+        </div>
+        
+        <div class="control-group">
+            <div class="toggle-section" onclick="toggleCode()">
+                📋 Show Implementation Code ▼
+            </div>
+            <div id="code-section" style="display: none;">
+                <div class="code-output" id="code-output">
+// Video sizing configuration
+const config = {
+    margin: 5,    // 5% top/bottom
+    scale: 100,   // No scaling
+    aspect: 'original'
+};
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="preview-container">
+        <div class="device-frame" id="device-frame">
+            <div class="device-screen" id="device-screen">
+                <stream id="video-preview"
+                    src="23033e88e44f4dd58d25e113fb199b82"
+                    controls
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    poster="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
+                </stream>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">Device:</span>
+                <span class="info-value" id="device-name">iPhone</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Screen:</span>
+                <span class="info-value" id="screen-size">390×844</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Video:</span>
+                <span class="info-value" id="video-size">475×390</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Coverage:</span>
+                <span class="info-value" id="coverage">46%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Visible:</span>
+                <span class="info-value" id="visible">100%</span>
+            </div>
+        </div>
+    </div>
+    
+    <script 
+        data-cfasync="false" 
+        defer 
+        type="text/javascript" 
+        src="https://embed.cloudflarestream.com/embed/r4xu.fla9.latest.js">
+    </script>
+    
+    <script>
+        // Configuration
+        let currentDevice = 'iphone';
+        let currentAspect = 'original';
+        let aspects = {
+            original: { width: 1460, height: 1200, ratio: 1.217 },
+            square: { width: 1200, height: 1200, ratio: 1.0 },
+            portrait: { width: 1000, height: 1400, ratio: 0.714 }
+        };
+        
+        const devices = {
+            iphone: { width: 390, height: 844, name: 'iPhone 14' },
+            ipad: { width: 820, height: 1180, name: 'iPad' },
+            desktop: { width: 1920, height: 1080, name: 'Desktop' },
+            custom: { width: 390, height: 844, name: 'Custom' }
+        };
+        
+        // Initialize controls
+        const marginSlider = document.getElementById('margin');
+        const scaleSlider = document.getElementById('scale');
+        
+        marginSlider.addEventListener('input', updatePreview);
+        scaleSlider.addEventListener('input', updatePreview);
+        
+        function setDevice(device) {
+            currentDevice = device;
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (device === 'custom') {
+                devices.custom.width = parseInt(document.getElementById('custom-width').value);
+                devices.custom.height = parseInt(document.getElementById('custom-height').value);
+            }
+            
+            updatePreview();
+        }
+        
+        function setAspect(aspect) {
+            currentAspect = aspect;
+            document.querySelectorAll('.aspect-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            updatePreview();
+        }
+        
+        function applyCustomSize() {
+            devices.custom.width = parseInt(document.getElementById('custom-width').value);
+            devices.custom.height = parseInt(document.getElementById('custom-height').value);
+            setDevice('custom');
+        }
+        
+        function updatePreview() {
+            const margin = parseInt(marginSlider.value);
+            const scale = parseInt(scaleSlider.value);
+            const device = devices[currentDevice];
+            const aspect = aspects[currentAspect];
+            
+            // Update device frame
+            const frame = document.getElementById('device-frame');
+            const screen = document.getElementById('device-screen');
+            const video = document.getElementById('video-preview');
+            
+            // Scale device for preview (max 600px height)
+            const previewScale = Math.min(1, 600 / device.height);
+            const frameWidth = device.width * previewScale;
+            const frameHeight = device.height * previewScale;
+            
+            frame.style.width = frameWidth + 'px';
+            frame.style.height = frameHeight + 'px';
+            screen.style.width = frameWidth + 'px';
+            screen.style.height = frameHeight + 'px';
+            
+            // Calculate video size with margin
+            const videoHeightPercent = 100 - (margin * 2);
+            const videoHeight = frameHeight * (videoHeightPercent / 100) * (scale / 100);
+            const videoWidth = videoHeight * aspect.ratio;
+            
+            // Position video
+            video.style.width = videoWidth + 'px';
+            video.style.height = videoHeight + 'px';
+            video.style.top = '50%';
+            video.style.left = '50%';
+            video.style.transform = 'translate(-50%, -50%)';
+            
+            // Update displays
+            document.getElementById('margin-value').textContent = margin;
+            document.getElementById('height-value').textContent = videoHeightPercent;
+            document.getElementById('scale-value').textContent = scale;
+            
+            // Calculate cropping
+            const cropTop = scale > 100 ? Math.round((scale - 100) / 2) : 0;
+            const cropSides = videoWidth > frameWidth ? Math.round(((videoWidth - frameWidth) / videoWidth) * 100) : 0;
+            
+            if (scale > 100 || cropSides > 0) {
+                document.getElementById('crop-info').textContent = 
+                    `Cropping: ${cropTop}% top/bottom, ${cropSides}% sides`;
+            } else {
+                document.getElementById('crop-info').textContent = 'No cropping';
+            }
+            
+            // Update info panel
+            document.getElementById('device-name').textContent = device.name;
+            document.getElementById('screen-size').textContent = `${device.width}×${device.height}`;
+            document.getElementById('video-size').textContent = 
+                `${Math.round(videoWidth/previewScale)}×${Math.round(videoHeight/previewScale)}`;
+            document.getElementById('coverage').textContent = 
+                Math.round((videoHeight / frameHeight) * 100) + '%';
+            document.getElementById('visible').textContent = 
+                scale <= 100 ? '100%' : Math.round(10000 / scale) + '%';
+            
+            // Update code
+            updateCode(margin, scale, aspect);
+        }
+        
+        function updateCode(margin, scale, aspect) {
+            const code = `// Video sizing configuration
+if (screenAspect < 0.7) { // Portrait mode
+    const margin = ${margin}; // ${margin}% top/bottom padding
+    const scale = ${scale}; // ${scale}% scale
+    
+    const targetHeight = vh * ${(100 - margin * 2) / 100} * (scale / 100);
+    const targetWidth = targetHeight * ${aspect.ratio};
+    
+    stream.style.height = \`\${targetHeight}px\`;
+    stream.style.width = \`\${targetWidth}px\`;
+    stream.style.top = '50%';
+    stream.style.left = '50%';
+    stream.style.transform = 'translate(-50%, -50%)';
+}
+
+// Aspect ratio: ${currentAspect} (${aspect.width}×${aspect.height})`;
+            
+            document.getElementById('code-output').textContent = code;
+        }
+        
+        function toggleCode() {
+            const section = document.getElementById('code-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Initialize
+        setDevice('iphone');
+        updatePreview();
+    </script>
+</body>
+</html>

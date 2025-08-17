@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame Crop Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 1.1em;
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+        }
+        
+        /* Controls Panel */
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-section {
+            margin-bottom: 30px;
+        }
+        
+        .control-section h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .preset-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .preset-btn.active {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .preset-btn small {
+            display: block;
+            font-size: 0.75em;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+        
+        .slider-control {
+            margin-bottom: 20px;
+        }
+        
+        .slider-control label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .slider-control input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #FFD700;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .value-badge {
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        /* Preview Area */
+        .preview-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .preview-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .preview-card h4 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+        
+        .device-frame {
+            background: #111;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .frame-display {
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        .frame-image {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        
+        .crop-indicator {
+            position: absolute;
+            border: 2px solid #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+            pointer-events: none;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+        }
+        
+        .stat-label {
+            color: #888;
+        }
+        
+        .stat-value {
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        /* Recommendation Box */
+        .recommendation-box {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 165, 0, 0.1));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        .recommendation-box h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+        
+        .recommendation-box p {
+            line-height: 1.6;
+            color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌞 Frame Crop Analysis</h1>
+        <p class="subtitle">Finding the optimal crop for mobile devices</p>
+    </div>
+    
+    <div class="main-container">
+        <div class="controls-panel">
+            <div class="control-section">
+                <h3>📐 Crop Presets</h3>
+                <div class="preset-grid">
+                    <button class="preset-btn active" onclick="setCrop('current')">
+                        Current
+                        <small>1460×1200</small>
+                    </button>
+                    <button class="preset-btn" onclick="setCrop('square')">
+                        Square
+                        <small>1200×1200</small>
+                    </button>
+                    <button class="preset-btn" onclick="setCrop('portrait')">
+                        Portrait
+                        <small>900×1350</small>
+                    </button>
+                    <button class="preset-btn" onclick="setCrop('instagram')">
+                        Instagram
+                        <small>1080×1350</small>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>🎛️ Custom Dimensions</h3>
+                
+                <div class="slider-control">
+                    <label>Width</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="cropWidth" min="800" max="1460" value="1460" oninput="updateCrop()">
+                        <span class="value-badge" id="widthValue">1460</span>
+                    </div>
+                </div>
+                
+                <div class="slider-control">
+                    <label>Height</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="cropHeight" min="800" max="1400" value="1200" oninput="updateCrop()">
+                        <span class="value-badge" id="heightValue">1200</span>
+                    </div>
+                </div>
+                
+                <div class="slider-control">
+                    <label>Horizontal Position</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="offsetX" min="-100" max="100" value="0" oninput="updateCrop()">
+                        <span class="value-badge" id="offsetXValue">0</span>
+                    </div>
+                </div>
+                
+                <div class="slider-control">
+                    <label>Vertical Position</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="offsetY" min="-100" max="100" value="0" oninput="updateCrop()">
+                        <span class="value-badge" id="offsetYValue">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-area">
+            <!-- Original Frame -->
+            <div class="preview-card">
+                <h4>📷 Original Frame with Crop Overlay</h4>
+                <div class="device-frame">
+                    <div class="frame-display" style="aspect-ratio: 1460/1200;">
+                        <canvas id="originalCanvas" style="width: 100%; height: 100%;"></canvas>
+                        <div class="crop-indicator" id="cropIndicator"></div>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Original:</span>
+                        <span class="stat-value">1460×1200</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Aspect:</span>
+                        <span class="stat-value">1.22:1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cropped Result -->
+            <div class="preview-card">
+                <h4>✂️ Cropped Result</h4>
+                <div class="device-frame">
+                    <div class="frame-display" id="croppedDisplay">
+                        <canvas id="croppedCanvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Size:</span>
+                        <span class="stat-value" id="cropSizeDisplay">1460×1200</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Aspect:</span>
+                        <span class="stat-value" id="cropAspectDisplay">1.22:1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Phone Preview -->
+            <div class="preview-card">
+                <h4>📱 iPhone Preview (390×844)</h4>
+                <div class="device-frame" style="aspect-ratio: 390/844; max-width: 200px; margin: 0 auto;">
+                    <div class="frame-display" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="phoneCanvas" style="max-width: 100%; max-height: 90%; object-fit: contain;"></canvas>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Coverage:</span>
+                        <span class="stat-value" id="phoneCoverage">46%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Improvement:</span>
+                        <span class="stat-value" id="phoneImprovement">+0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- iPad Preview -->
+            <div class="preview-card">
+                <h4>📱 iPad Preview (820×1180)</h4>
+                <div class="device-frame" style="aspect-ratio: 820/1180; max-width: 250px; margin: 0 auto;">
+                    <div class="frame-display" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="ipadCanvas" style="max-width: 100%; max-height: 90%; object-fit: contain;"></canvas>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Coverage:</span>
+                        <span class="stat-value" id="ipadCoverage">70%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Improvement:</span>
+                        <span class="stat-value" id="ipadImprovement">+0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="recommendation-box">
+                <h3>💡 Recommendation</h3>
+                <p id="recommendationText">
+                    The current 1460×1200 crop shows the full corona but only uses 46% of phone screen height. 
+                    Consider a square crop (1200×1200) for 19% better coverage while maintaining quality, 
+                    or a portrait crop (900×1350) for 41% improvement with some corona loss.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Create a test pattern if no image available
+        function createTestPattern(canvas, width, height) {
+            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Background gradient (space)
+            const gradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width/2);
+            gradient.addColorStop(0, '#003');
+            gradient.addColorStop(1, '#000');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Sun disk
+            const sunGradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width/3);
+            sunGradient.addColorStop(0, '#FFD700');
+            sunGradient.addColorStop(0.5, '#FFA500');
+            sunGradient.addColorStop(1, 'rgba(255,165,0,0.3)');
+            ctx.fillStyle = sunGradient;
+            ctx.beginPath();
+            ctx.arc(width/2, height/2, width/3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Corona effect
+            ctx.strokeStyle = 'rgba(255,215,0,0.2)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                ctx.beginPath();
+                ctx.arc(width/2, height/2, width/3 + i * 20, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        
+        // Presets
+        const presets = {
+            current: { width: 1460, height: 1200, x: 0, y: 0 },
+            square: { width: 1200, height: 1200, x: 0, y: 0 },
+            portrait: { width: 900, height: 1350, x: 0, y: 0 },
+            instagram: { width: 1080, height: 1350, x: 0, y: 0 }
+        };
+        
+        let originalCanvas, croppedCanvas, phoneCanvas, ipadCanvas;
+        let imageLoaded = false;
+        
+        function init() {
+            originalCanvas = document.getElementById('originalCanvas');
+            croppedCanvas = document.getElementById('croppedCanvas');
+            phoneCanvas = document.getElementById('phoneCanvas');
+            ipadCanvas = document.getElementById('ipadCanvas');
+            
+            // Try to load the test frame
+            const img = new Image();
+            img.onload = function() {
+                imageLoaded = true;
+                originalCanvas.width = 1460;
+                originalCanvas.height = 1200;
+                const ctx = originalCanvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, 1460, 1200);
+                updateCrop();
+            };
+            img.onerror = function() {
+                // Use test pattern if image fails
+                createTestPattern(originalCanvas, 1460, 1200);
+                updateCrop();
+            };
+            img.src = 'test_frame.jpg';
+        }
+        
+        function setCrop(preset) {
+            const settings = presets[preset];
+            document.getElementById('cropWidth').value = settings.width;
+            document.getElementById('cropHeight').value = settings.height;
+            document.getElementById('offsetX').value = settings.x;
+            document.getElementById('offsetY').value = settings.y;
+            
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            updateCrop();
+            updateRecommendation(preset);
+        }
+        
+        function updateCrop() {
+            const width = parseInt(document.getElementById('cropWidth').value);
+            const height = parseInt(document.getElementById('cropHeight').value);
+            const offsetX = parseInt(document.getElementById('offsetX').value);
+            const offsetY = parseInt(document.getElementById('offsetY').value);
+            
+            // Update displays
+            document.getElementById('widthValue').textContent = width;
+            document.getElementById('heightValue').textContent = height;
+            document.getElementById('offsetXValue').textContent = offsetX;
+            document.getElementById('offsetYValue').textContent = offsetY;
+            
+            // Calculate crop position
+            const left = (1460 - width) / 2 + offsetX;
+            const top = (1200 - height) / 2 + offsetY;
+            
+            // Update crop indicator
+            const indicator = document.getElementById('cropIndicator');
+            indicator.style.left = (left / 1460 * 100) + '%';
+            indicator.style.top = (top / 1200 * 100) + '%';
+            indicator.style.width = (width / 1460 * 100) + '%';
+            indicator.style.height = (height / 1200 * 100) + '%';
+            
+            // Update cropped canvas
+            const croppedDisplay = document.getElementById('croppedDisplay');
+            croppedDisplay.style.aspectRatio = width + '/' + height;
+            
+            croppedCanvas.width = width;
+            croppedCanvas.height = height;
+            const ctx = croppedCanvas.getContext('2d');
+            
+            if (imageLoaded) {
+                ctx.drawImage(originalCanvas, left, top, width, height, 0, 0, width, height);
+            } else {
+                // Draw cropped test pattern
+                ctx.drawImage(originalCanvas, left, top, width, height, 0, 0, width, height);
+            }
+            
+            // Update info
+            document.getElementById('cropSizeDisplay').textContent = width + '×' + height;
+            document.getElementById('cropAspectDisplay').textContent = (width/height).toFixed(2) + ':1';
+            
+            // Update device previews
+            updateDevicePreview(phoneCanvas, width, height, 390, 844, 'phone');
+            updateDevicePreview(ipadCanvas, width, height, 820, 1180, 'ipad');
+        }
+        
+        function updateDevicePreview(canvas, cropW, cropH, deviceW, deviceH, device) {
+            const aspect = cropW / cropH;
+            const deviceAspect = deviceW / deviceH;
+            
+            // Calculate how the video fits on device with 90% height (5% margins)
+            let videoW, videoH;
+            if (aspect > deviceAspect) {
+                // Video wider than device
+                videoW = deviceW;
+                videoH = deviceW / aspect;
+            } else {
+                // Video fits height
+                videoH = deviceH * 0.9;
+                videoW = videoH * aspect;
+                if (videoW > deviceW) {
+                    videoW = deviceW;
+                    videoH = videoW / aspect;
+                }
+            }
+            
+            // Set canvas size to match video aspect
+            canvas.width = cropW;
+            canvas.height = cropH;
+            canvas.style.width = (videoW / deviceW * 100) + '%';
+            canvas.style.height = (videoH / deviceH * 100) + '%';
+            
+            // Draw the cropped image
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(croppedCanvas, 0, 0);
+            
+            // Calculate coverage
+            const coverage = Math.round((videoH / deviceH) * 100);
+            const baseCoverage = device === 'phone' ? 46 : 70;
+            const improvement = coverage - baseCoverage;
+            
+            document.getElementById(device + 'Coverage').textContent = coverage + '%';
+            document.getElementById(device + 'Improvement').textContent = 
+                (improvement >= 0 ? '+' : '') + improvement + '%';
+        }
+        
+        function updateRecommendation(preset) {
+            const recommendations = {
+                current: "The current 1460×1200 crop shows the full corona but only uses 46% of phone screen height. Consider alternative crops for better mobile experience.",
+                square: "Square crop (1200×1200) provides 19% better phone coverage while maintaining most corona detail. Works well across all devices and social media platforms.",
+                portrait: "Portrait crop (900×1350) gives 41% better phone coverage but crops significant corona. Best for mobile-first experiences.",
+                instagram: "Instagram crop (1080×1350) balances mobile optimization with corona visibility. 30% better phone coverage with moderate cropping."
+            };
+            
+            document.getElementById('recommendationText').textContent = 
+                recommendations[preset] || recommendations.current;
+        }
+        
+        // Initialize
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

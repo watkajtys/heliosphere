@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- SEO Meta Tags -->
+    <title>Heliosphere - Daily Solar Timelapse | Real NASA Satellite Imagery</title>
+    <meta name="description" content="Experience the Sun like never before with Heliosphere's daily timelapse videos. Real NASA satellite data from SOHO and SDO, showing 56 days of solar activity in stunning detail.">
+    <meta name="keywords" content="solar timelapse, sun video, NASA satellite, SOHO, SDO, solar corona, space weather, heliosphere, solar activity, CME, solar flares">
+    <meta name="author" content="Heliosphere">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://heliosphere.app/">
+    <meta property="og:title" content="Heliosphere - Daily Solar Timelapse">
+    <meta property="og:description" content="Watch 56 days of the Sun's activity in 3 minutes. Real NASA satellite imagery updated daily.">
+    <meta property="og:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://heliosphere.app/">
+    <meta property="twitter:title" content="Heliosphere - Daily Solar Timelapse">
+    <meta property="twitter:description" content="Watch 56 days of the Sun's activity in 3 minutes. Real NASA satellite imagery updated daily.">
+    <meta property="twitter:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://heliosphere.app/">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>☀️</text></svg>">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        stream {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <stream 
+        src="23033e88e44f4dd58d25e113fb199b82"
+        controls
+        autoplay
+        loop
+        muted
+        playsinline
+        preload="auto"
+        defaultTextTrack="off"
+        poster="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
+    </stream>
+    
+    <script 
+        data-cfasync="false" 
+        defer 
+        type="text/javascript" 
+        src="https://embed.cloudflarestream.com/embed/r4xu.fla9.latest.js">
+    </script>
+    
+    <script>
+        function optimizeVideoSize() {
+            const stream = document.querySelector('stream');
+            if (!stream) return;
+            
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const videoAspect = 1460 / 1200; // 1.217
+            const screenAspect = vw / vh;
+            
+            // Calculate how much we can scale up without losing the sun
+            const sunDiskRatio = 0.7; // Sun disk is ~70% of video height
+            
+            if (screenAspect < 0.7) { // Portrait mode
+                // Add 5% padding top and bottom
+                const targetHeight = vh * 0.9; // 90% of viewport height
+                const targetWidth = targetHeight * videoAspect;
+                
+                stream.style.height = `${targetHeight}px`;
+                stream.style.width = `${targetWidth}px`;
+                stream.style.top = '50%';
+                stream.style.left = '50%';
+                stream.style.transform = 'translate(-50%, -50%)';
+            } else {
+                // Landscape: fit nicely
+                if (screenAspect > videoAspect) {
+                    // Screen wider than video
+                    stream.style.height = '100vh';
+                    stream.style.width = `${vh * videoAspect}px`;
+                    stream.style.top = '0';
+                    stream.style.left = '50%';
+                    stream.style.transform = 'translateX(-50%)';
+                } else {
+                    // Screen taller than video  
+                    stream.style.width = '100vw';
+                    stream.style.height = `${vw / videoAspect}px`;
+                    stream.style.top = '50%';
+                    stream.style.left = '0';
+                    stream.style.transform = 'translateY(-50%)';
+                }
+            }
+        }
+        
+        // Run on load and resize
+        window.addEventListener('load', optimizeVideoSize);
+        window.addEventListener('resize', optimizeVideoSize);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(optimizeVideoSize, 100);
+        });
+        
+        // Also run immediately in case stream is already loaded
+        optimizeVideoSize();
+    </script>
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        "name": "Heliosphere Solar Timelapse - 56 Days of Solar Activity",
+        "description": "Daily timelapse video of the Sun showing 56 days of solar activity from NASA's SOHO and SDO satellites",
+        "thumbnailUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg",
+        "uploadDate": "2024-12-15",
+        "duration": "PT8S",
+        "contentUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/manifest/video.m3u8",
+        "embedUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/iframe",
+        "publisher": {
+            "@type": "Organization",
+            "name": "Heliosphere",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://heliosphere.app/logo.png"
+            }
+        }
+    }
+    </script>
+</body>
+</html>

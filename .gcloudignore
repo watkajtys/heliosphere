@@ -1,0 +1,71 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore, with the addition of
+# "#!include" directives (which insert the entries of the given .gitignore-style
+# file at that point).
+
+.gcloudignore
+.git
+.gitignore
+
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Test files and local data
+test_frames/
+video_frames_*
+video_*sec_*
+production_frames/
+*.mp4
+*.png
+
+# Local config and logs
+.env
+*.log
+server.log
+video_generation.log
+
+# Development files
+monitor_server.js
+monitor.html
+generate_optimized_video.js
+generate_production_frames.js
+test_*.js
+create_*.js
+renumber_frames.js
+reverse_frames.js
+fix_frame_order.js
+
+# Documentation
+*.md
+interpolation_test_report.md
+
+# Build artifacts
+dist/
+*.map
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Local manifests
+manifest.json
+production_manifest.json
+progress.json
+
+# FFmpeg downloads
+ffmpeg-master-latest-win64-gpl/
+ffmpeg.zip
+
+# Jules scratch work
+jules-scratch/
+
+# Test images
+*.png
+!cloud_monitor.html
