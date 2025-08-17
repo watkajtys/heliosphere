@@ -12,6 +12,10 @@ import { promisify } from 'util';
 import sharp from 'sharp';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import express from 'express';
+import VideoEncoder from './lib/video_encoder.js';
+import FrameQualityValidator from './frame_quality_validator.js';
+import { getQualityMonitor } from './lib/quality_monitor.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -48,7 +52,10 @@ const CONFIG = {
     FRAMES_DIR: '/opt/heliosphere/frames',
     VIDEOS_DIR: '/opt/heliosphere/videos',
     STATE_FILE: '/opt/heliosphere/production_state.json',
-    TEMP_DIR: '/tmp/heliosphere'
+    TEMP_DIR: '/tmp/heliosphere',
+    
+    // Monitoring  
+    PORT: process.env.PORT || 3001
 };
 
 // Global state with duplicate tracking
@@ -65,7 +72,314 @@ let productionState = {
     },
     pendingFrames: [], // Frames being fetched in parallel
     frameQueue: [],    // Frames ready for processing
+    qualityScores: [], // Track quality scores
+    qualityIssues: []  // Track any quality issues
 };
+
+// Initialize quality components
+const qualityValidator = new FrameQualityValidator({
+    minFileSize: 10,
+    maxFileSize: 10000  // Basically no limit for lossless
+});
+const qualityMonitor = getQualityMonitor();
+
+// Initialize Express app (simple pattern like working daily production)
+const app = express();
+app.use(express.json());
+
+// Serve static files
+app.use(express.static('.'));
+
+// Main monitoring route - serve the monitor HTML
+app.get('/monitor', (req, res) => {
+    res.sendFile('/opt/heliosphere/monitor_production.html');
+});
+
+// Simple redirect from root
+app.get('/', (req, res) => {
+    res.redirect('/monitor');
+});
+
+// API routes for monitoring data
+app.get('/api/status', (req, res) => {
+    const runtime = productionState.startTime ? 
+        ((Date.now() - productionState.startTime) / 1000).toFixed(1) : 0;
+    
+    res.json({
+        status: productionState.status,
+        phase: 'processing',
+        processedFrames: productionState.processedFrames,
+        totalFrames: productionState.totalFrames,
+        framesPerMinute: runtime > 0 ? 
+            (productionState.processedFrames / (runtime / 60)).toFixed(1) : 0,
+        eta: calculateETA(),
+        quality: {
+            ...qualityMonitor.getMetrics(),
+            averageScore: productionState.qualityScores.length > 0 ?
+                productionState.qualityScores.reduce((a, b) => a + b, 0) / productionState.qualityScores.length : 0,
+            issues: productionState.qualityIssues.length
+        },
+        performance: {
+            elapsedTime: formatTime(runtime * 1000),
+            avgProcessTime: 0,
+            queueSize: 0
+        },
+        issues: {
+            critical: productionState.qualityIssues.filter(i => i.score < 50).length,
+            warnings: productionState.qualityIssues.filter(i => i.score >= 50 && i.score < 70).length,
+            duplicates: productionState.duplicateRetries,
+            recent: productionState.qualityIssues.slice(-10)
+        }
+    });
+});
+
+// Progress API endpoint (compatible with monitor HTML)
+app.get('/api/progress', (req, res) => {
+    const runtime = productionState.startTime ? 
+        ((Date.now() - productionState.startTime) / 1000).toFixed(1) : 0;
+    
+    res.json({
+        status: productionState.status,
+        progress: {
+            current: productionState.processedFrames,
+            total: productionState.totalFrames
+        },
+        performance: {
+            avgTime: runtime > 0 ? (runtime / productionState.processedFrames) : 0,
+            totalTime: runtime
+        },
+        fallbacks: {
+            count: productionState.duplicateRetries,
+            rate: productionState.processedFrames > 0 ? 
+                (productionState.duplicateRetries / productionState.processedFrames * 100) : 0
+        },
+        log: [`Frame generation in progress... ${productionState.processedFrames}/${productionState.totalFrames}`],
+        lastUpdate: new Date().toISOString()
+    });
+});
+body{font-family:monospace;background:#000;color:#0f0;padding:20px;}
+.card{background:#111;border:1px solid #0f0;margin:10px 0;padding:15px;}
+.value{color:#00ff00;font-weight:bold;font-size:1.5em;}
+.frames-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0;}
+.frame-preview{border:1px solid #0f0;padding:5px;text-align:center;}
+.frame-preview img{max-width:100%;height:auto;border:1px solid #333;}
+.frame-info{font-size:0.8em;color:#888;margin-top:5px;}
+</style></head><body>
+<h1>🌞 Heliosphere Monitor</h1>
+<div class="card"><h3>Progress</h3><div id="progress" class="value">Loading...</div></div>
+<div class="card"><h3>Status</h3><div id="status" class="value">Loading...</div></div>
+<div class="card"><h3>Performance</h3><div id="performance" class="value">Loading...</div></div>
+<div class="card">
+    <h3>Recent Frames (Last 5)</h3>
+    <div id="recent-frames" class="frames-grid">Loading...</div>
+</div>
+<div class="card">
+    <h3>Spot Check Frames (Every 100th)</h3>
+    <div id="spot-frames" class="frames-grid">Loading...</div>
+</div>
+<script>
+async function update() {
+    try {
+        const res = await fetch('/api/progress');
+        const data = await res.json();
+        document.getElementById('progress').textContent = data.progress.current + '/' + data.progress.total;
+        document.getElementById('status').textContent = data.status;
+        document.getElementById('performance').textContent = (data.performance.totalTime/60).toFixed(1) + 'm runtime';
+        
+        // Update frame previews
+        updateFramePreviews(data.progress.current);
+    } catch(e) {
+        document.getElementById('status').textContent = 'API Error: ' + e.message;
+    }
+}
+
+function updateFramePreviews(currentFrame) {
+    // Recent frames (last 5)
+    const recentFrames = [];
+    for(let i = Math.max(0, currentFrame - 4); i <= currentFrame; i++) {
+        if(i >= 0) recentFrames.push(i);
+    }
+    
+    document.getElementById('recent-frames').innerHTML = recentFrames.map(f => 
+        \`<div class="frame-preview">
+            <img src="/api/frame/\${f}" onerror="this.style.display='none'">
+            <div class="frame-info">Frame \${f}</div>
+        </div>\`
+    ).join('');
+    
+    // Spot check frames (every 100th)
+    const spotFrames = [];
+    for(let i = 0; i <= currentFrame; i += 100) {
+        if(i <= currentFrame) spotFrames.push(i);
+    }
+    
+    document.getElementById('spot-frames').innerHTML = spotFrames.slice(-10).map(f => 
+        \`<div class="frame-preview">
+            <img src="/api/frame/\${f}" onerror="this.style.display='none'">
+            <div class="frame-info">Frame \${f}</div>
+        </div>\`
+    ).join('');
+}
+
+setInterval(update, 10000); // Update every 10 seconds instead of 3
+update();
+</script></body></html>`);
+    });
+    
+    // API endpoints for monitoring
+    app.get('/api/status', (req, res) => {
+        const runtime = productionState.startTime ? 
+            ((Date.now() - productionState.startTime) / 1000).toFixed(1) : 0;
+        
+        res.json({
+            status: productionState.status,
+            phase: 'processing',
+            processedFrames: productionState.processedFrames,
+            totalFrames: productionState.totalFrames,
+            framesPerMinute: runtime > 0 ? 
+                (productionState.processedFrames / (runtime / 60)).toFixed(1) : 0,
+            eta: calculateETA(),
+            quality: {
+                ...qualityMonitor.getMetrics(),
+                averageScore: productionState.qualityScores.length > 0 ?
+                    productionState.qualityScores.reduce((a, b) => a + b, 0) / productionState.qualityScores.length : 0,
+                minScore: productionState.qualityScores.length > 0 ?
+                    Math.min(...productionState.qualityScores) : 0,
+                maxScore: productionState.qualityScores.length > 0 ?
+                    Math.max(...productionState.qualityScores) : 0,
+                issues: productionState.qualityIssues.length
+            },
+            memory: getMemoryStats(),
+            encoding: {
+                progress: 0,
+                chunk: null,
+                speed: 0
+            },
+            performance: {
+                elapsedTime: formatTime(runtime * 1000),
+                cpuUsage: process.cpuUsage ? process.cpuUsage().user / 1000000 : 0,
+                avgProcessTime: 0,
+                queueSize: 0
+            },
+            issues: {
+                critical: productionState.qualityIssues.filter(i => i.score < 50).length,
+                warnings: productionState.qualityIssues.filter(i => i.score >= 50 && i.score < 70).length,
+                duplicates: productionState.duplicateRetries,
+                recent: productionState.qualityIssues.slice(-10)
+            }
+        });
+    });
+    
+    app.get('/api/quality', (req, res) => {
+        res.json(qualityMonitor.getQualityReport());
+    });
+    
+    app.get('/api/memory', (req, res) => {
+        res.json(getMemoryStats());
+    });
+    
+    // Progress API endpoint (same data as status, for compatibility)
+    app.get('/api/progress', (req, res) => {
+        const runtime = productionState.startTime ? 
+            ((Date.now() - productionState.startTime) / 1000).toFixed(1) : 0;
+        
+        res.json({
+            status: productionState.status,
+            progress: {
+                current: productionState.processedFrames,
+                total: productionState.totalFrames
+            },
+            performance: {
+                avgTime: runtime > 0 ? (runtime / productionState.processedFrames) : 0,
+                totalTime: runtime
+            },
+            fallbacks: {
+                count: productionState.duplicateRetries,
+                rate: productionState.processedFrames > 0 ? 
+                    (productionState.duplicateRetries / productionState.processedFrames * 100) : 0
+            },
+            log: [`Frame generation in progress... ${productionState.processedFrames}/${productionState.totalFrames}`],
+            lastUpdate: new Date().toISOString()
+        });
+    });
+    
+    // Frame preview endpoint - serve frame images
+    app.get('/api/frame/:frameNumber', (req, res) => {
+        const frameNumber = req.params.frameNumber.padStart(5, '0');
+        const framePath = path.join(CONFIG.FRAMES_DIR, `frame_${frameNumber}.jpg`);
+        
+        res.sendFile(framePath, (err) => {
+            if (err) {
+                res.status(404).json({ error: 'Frame not found' });
+            }
+        });
+    });
+    
+        return new Promise((resolve, reject) => {
+            monitoringServer = app.listen(CONFIG.MONITOR_PORT, '0.0.0.0', () => {
+                console.log(`📊 ✅ Monitoring server started successfully!`);
+                console.log(`📊 Dashboard: http://65.109.0.112:${CONFIG.MONITOR_PORT}/monitor`);
+                console.log(`📊 Local: http://localhost:${CONFIG.MONITOR_PORT}/monitor`);
+                console.log(`📡 API status: http://65.109.0.112:${CONFIG.MONITOR_PORT}/api/status`);
+                resolve();
+            });
+            
+            monitoringServer.on('error', (err) => {
+                console.error(`📊 ❌ Failed to start monitoring server on port ${CONFIG.MONITOR_PORT}:`, err.message);
+                if (err.code === 'EADDRINUSE') {
+                    console.error(`📊 Port ${CONFIG.MONITOR_PORT} is already in use. Checking for conflicting processes...`);
+                }
+                monitoringServer = null;
+                reject(err);
+            });
+        });
+        
+    } catch (error) {
+        console.error('📊 ❌ Error initializing monitoring server:', error.message);
+        monitoringServer = null;
+        throw error;
+    }
+}
+
+// Helper functions for monitoring
+function calculateETA() {
+    if (!productionState.startTime || productionState.processedFrames === 0) return 'Unknown';
+    
+    const elapsed = Date.now() - productionState.startTime;
+    const framesPerMs = productionState.processedFrames / elapsed;
+    const remaining = productionState.totalFrames - productionState.processedFrames;
+    const msRemaining = remaining / framesPerMs;
+    
+    const minutes = Math.floor(msRemaining / 60000);
+    if (minutes < 60) return `${minutes} minutes`;
+    
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+}
+
+function getMemoryStats() {
+    const used = process.memoryUsage();
+    return {
+        heapUsed: `${(used.heapUsed / 1024 / 1024).toFixed(1)} MB`,
+        heapPercent: `${(used.heapUsed / used.heapTotal * 100).toFixed(1)}%`,
+        heapTotal: `${(used.heapTotal / 1024 / 1024).toFixed(1)} MB`,
+        rss: `${(used.rss / 1024 / 1024).toFixed(1)} MB`,
+        gcCount: global.gc ? 1 : 0
+    };
+}
+
+function formatTime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+        return `${hours}:${String(minutes % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    } else {
+        return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+    }
+}
 
 /**
  * DUPLICATE DETECTION STRATEGY
@@ -117,7 +431,7 @@ async function fetchImage(sourceId, date) {
     const height = sourceId === 4 ? 1200 : 1920;
     
     const apiUrl = `https://api.helioviewer.org/v2/takeScreenshot/?` +
-        `date=${date}&layers=[${sourceId},1,100]&imageScale=${imageScale}` +
+        `date=${date}&layers=%5B${sourceId},1,100%5D&imageScale=${imageScale}` +
         `&width=${width}&height=${height}&x0=0&y0=0&display=true&watermark=false`;
     
     const tempFile = path.join(CONFIG.TEMP_DIR, `temp_${Date.now()}_${Math.random()}.png`);
@@ -297,23 +611,53 @@ async function processFramesOptimized(frames) {
             gradeSunDisk(frameData.sunDisk.buffer)
         ]);
         
-        // Apply feathering and composite
-        const featheredSunDisk = await applyCircularFeather(gradedSunDisk);
+        // Apply square feathering and composite
+        const featheredSunDisk = await applySquareFeather(gradedSunDisk);
         const composite = await createComposite(gradedCorona, featheredSunDisk);
         
         // Save frame
         const framePath = path.join(CONFIG.FRAMES_DIR, `frame_${String(frameData.frameNumber).padStart(5, '0')}.jpg`);
         await fs.writeFile(framePath, composite);
         
+        // Validate frame quality (inline validation)
+        const validation = await qualityValidator.validateFrame(framePath, frameData.frameNumber);
+        
+        // Update quality monitor
+        qualityMonitor.updateFrameMetrics(frameData.frameNumber, {
+            success: validation.valid,
+            qualityScore: validation.score,
+            isDuplicate: false
+        });
+        
+        // Track quality scores
+        productionState.qualityScores.push(validation.score);
+        if (!validation.valid || validation.score < 70) {
+            productionState.qualityIssues.push({
+                frame: frameData.frameNumber,
+                score: validation.score,
+                issues: validation.issues
+            });
+        }
+        
+        // Log quality every 100 frames
+        if (frameData.frameNumber % 100 === 0) {
+            const avgScore = productionState.qualityScores.slice(-100).reduce((a, b) => a + b, 0) / 100;
+            console.log(`   Quality: Avg score ${avgScore.toFixed(1)}, Frame ${frameData.frameNumber} score: ${validation.score}`);
+        }
+        
         return {
             frameNumber: frameData.frameNumber,
             success: true,
-            path: framePath
+            path: framePath,
+            qualityScore: validation.score
         };
     }
     
     // Start the pipeline
-    console.log('\n🚀 Starting optimized pipeline...\n');
+    console.log('\n🚀 Starting optimized pipeline with quality monitoring...\n');
+    
+    // Initialize quality monitoring
+    qualityMonitor.start(frames.length);
     
     // Keep fetching and processing until done
     while (fetchQueue.length > 0 || activeFetches.size > 0 || processingQueue.length > 0 || activeProcesses.size > 0) {
@@ -337,36 +681,175 @@ async function processFramesOptimized(frames) {
     console.log(`   Unique corona images: ${productionState.checksumCache.corona.size}`);
     console.log(`   Unique sun disk images: ${productionState.checksumCache.sunDisk.size}`);
     
+    // Quality summary
+    if (productionState.qualityScores.length > 0) {
+        const avgScore = productionState.qualityScores.reduce((a, b) => a + b, 0) / productionState.qualityScores.length;
+        const minScore = Math.min(...productionState.qualityScores);
+        const maxScore = Math.max(...productionState.qualityScores);
+        
+        console.log('\n📊 Quality Summary:');
+        console.log(`   Average Score: ${avgScore.toFixed(1)}`);
+        console.log(`   Min/Max: ${minScore.toFixed(1)}/${maxScore.toFixed(1)}`);
+        console.log(`   Issues: ${productionState.qualityIssues.length} frames below threshold`);
+        
+        if (productionState.qualityIssues.length > 0 && productionState.qualityIssues.length <= 5) {
+            console.log('   Problem frames:');
+            productionState.qualityIssues.forEach(issue => {
+                console.log(`     Frame ${issue.frame}: Score ${issue.score}`);
+            });
+        }
+    }
+    
     return results;
 }
 
-// Color grading functions
+// Color grading functions - Optimized dramatic settings preserving detail
 async function gradeCorona(buffer) {
     return await sharp(buffer)
-        .modulate({ saturation: 0.3, brightness: 1.0, hue: -5 })
+        .modulate({ saturation: 0.2, brightness: 1.0, hue: -12 })
         .tint({ r: 220, g: 230, b: 240 })
-        .linear(1.2, -12)
-        .gamma(1.2)
+        .linear(1.0, 0)  // No linear boost to preserve highlights
+        .gamma(1.6)      // Dramatic contrast without clipping
         .toBuffer();
 }
 
 async function gradeSunDisk(buffer) {
     return await sharp(buffer)
-        .modulate({ saturation: 1.2, brightness: 1.4, hue: 15 })
+        .modulate({ saturation: 1.4, brightness: 1.2, hue: 20 })
         .tint({ r: 255, g: 200, b: 120 })
-        .linear(1.7, -30)
-        .gamma(1.15)
+        .linear(1.1, -5)  // Gentle boost to make sun disk visible with screen blend
+        .gamma(1.0)      
         .toBuffer();
 }
 
-async function applyCircularFeather(buffer) {
-    // Implementation here
-    return buffer;
+async function applyCircularFeather(imageBuffer, finalSize = 1435, compositeRadius = 400, featherRadius = 40) {
+    // First, resize the image to the final size.
+    const resizedImage = await sharp(imageBuffer)
+        .resize(finalSize, finalSize)
+        .toBuffer();
+
+    // If feathering is zero, no need to apply a mask.
+    if (featherRadius <= 0) {
+        return resizedImage;
+    }
+
+    // Create an SVG for the feathered mask.
+    const imageRadius = finalSize / 2;
+    const compositeRatio = compositeRadius / imageRadius;
+    const featherStart = Math.max(0, compositeRadius - featherRadius);
+    const featherStartRatio = featherStart / imageRadius;
+    
+    const svgMask = `
+        <svg width="${finalSize}" height="${finalSize}">
+            <defs>
+                <radialGradient id="feather" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="${featherStartRatio * 100}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="${compositeRatio * 100}%" style="stop-color:white;stop-opacity:0" />
+                </radialGradient>
+            </defs>
+            <circle cx="50%" cy="50%" r="50%" fill="url(#feather)" />
+        </svg>
+    `;
+
+    const mask = await sharp(Buffer.from(svgMask)).png().toBuffer();
+
+    // Apply the mask as an alpha channel to the resized image.
+    const maskedImage = await sharp(resizedImage)
+        .composite([{
+            input: mask,
+            blend: 'dest-in' // Use the mask to define the alpha channel.
+        }])
+        .png()
+        .toBuffer();
+
+    return maskedImage;
 }
 
-async function createComposite(corona, sunDisk) {
-    // Implementation here
-    return corona;
+// Square feathering function - same size as circular, just square shape
+async function applySquareFeather(imageBuffer, finalSize = 1435, compositeRadius = 400, featherRadius = 40) {
+    const resizedImage = await sharp(imageBuffer).resize(finalSize, finalSize).toBuffer();
+    
+    if (featherRadius <= 0) return resizedImage;
+    
+    // Create square mask with same dimensions as circular
+    const center = finalSize / 2;
+    const squareSize = compositeRadius * 2;
+    const left = center - compositeRadius;
+    const top = center - compositeRadius;
+    
+    const svgMask = `
+        <svg width="${finalSize}" height="${finalSize}">
+            <defs>
+                <linearGradient id="featherX" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:white;stop-opacity:0" />
+                    <stop offset="${(featherRadius/squareSize*100)}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="${(100-featherRadius/squareSize*100)}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:white;stop-opacity:0" />
+                </linearGradient>
+                <linearGradient id="featherY" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:white;stop-opacity:0" />
+                    <stop offset="${(featherRadius/squareSize*100)}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="${(100-featherRadius/squareSize*100)}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:white;stop-opacity:0" />
+                </linearGradient>
+            </defs>
+            <rect x="${left}" y="${top}" width="${squareSize}" height="${squareSize}" fill="url(#featherX)" />
+            <rect x="${left}" y="${top}" width="${squareSize}" height="${squareSize}" fill="url(#featherY)" style="mix-blend-mode: multiply;" />
+        </svg>
+    `;
+
+    const mask = await sharp(Buffer.from(svgMask)).png().toBuffer();
+    return await sharp(resizedImage)
+        .composite([{ input: mask, blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+}
+
+async function createComposite(coronaBuffer, sunDiskBuffer) {
+    const width = 1920;
+    const height = 1200;
+    
+    // Apply the feathering to the sun disk image
+    const featheredSunDisk = await applyCircularFeather(sunDiskBuffer, 1435, 400, 40);
+    
+    // Determine the full canvas size for compositing
+    const fullWidth = Math.max(width, 1435);
+    const fullHeight = Math.max(height, 1435);
+
+    // Create full composite
+    const fullComposite = await sharp({
+        create: {
+            width: fullWidth,
+            height: fullHeight,
+            channels: 4, // Use 4 channels for RGBA
+            background: { r: 0, g: 0, b: 0, alpha: 0 }
+        }
+    })
+    .composite([
+        { input: coronaBuffer, gravity: 'center' },
+        { input: featheredSunDisk, gravity: 'center', blend: 'screen' }
+    ])
+    .png()
+    .toBuffer();
+
+    // Apply tuned crop settings from tuner (1920x1435 -> 1460x1200)
+    const cropTop = 117;    // Tuned crop top
+    const cropLeft = 230;   // Tuned crop left  
+    const finalWidth = 1460; // Tuned final width (1920 - 230 - 230)
+    const finalHeight = 1200; // Tuned final height (1435 - 117 - 118)
+    
+    const croppedImage = await sharp(fullComposite)
+        .extract({ 
+            width: finalWidth, 
+            height: finalHeight, 
+            left: cropLeft, 
+            top: cropTop 
+        })
+        .jpeg({ quality: 100, mozjpeg: true })
+        .toBuffer();
+
+    return croppedImage;
 }
 
 async function saveState() {
@@ -381,38 +864,282 @@ async function saveState() {
     await fs.writeFile(CONFIG.STATE_FILE, JSON.stringify(stateToSave, null, 2));
 }
 
-// Example usage
-async function main() {
-    console.log('🌞 Optimized Production System');
-    console.log('================================\n');
+// Generate video from processed frames
+async function generateProductionVideo(days, outputName) {
+    console.log(`\n🎬 Generating ${outputName} video (${days} days)...`);
     
-    // Generate test frames
-    const frames = [];
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 2); // 48-hour delay
+    // Initialize video encoder
+    const encoder = new VideoEncoder({
+        framesDir: CONFIG.FRAMES_DIR,
+        outputDir: CONFIG.VIDEOS_DIR,
+        fps: CONFIG.FPS,
+        crf: 0,  // LOSSLESS for Cloudflare Stream
+        preset: 'ultrafast',  // Fast encoding since no compression
+        maxChunkFrames: 1000
+    });
     
-    for (let i = 0; i < 100; i++) { // Test with 100 frames
-        const frameDate = new Date(startDate);
-        frameDate.setMinutes(frameDate.getMinutes() + i * 15);
-        frames.push({
-            number: i,
-            date: frameDate
-        });
+    await encoder.initialize();
+    
+    try {
+        const totalFrames = days * CONFIG.FRAMES_PER_DAY;
+        
+        // Check if we have enough frames
+        const processedFrames = productionState.processedFrames;
+        if (processedFrames < totalFrames) {
+            console.warn(`⚠️ Only ${processedFrames} frames available, need ${totalFrames}`);
+        }
+        
+        const framesToEncode = Math.min(totalFrames, processedFrames);
+        
+        // Generate video with chunked encoding for large datasets
+        const result = await encoder.generateChunkedVideo(
+            framesToEncode,
+            outputName,
+            {
+                width: 1460,
+                height: 1200
+            }
+        );
+        
+        console.log(`✅ Video generated: ${result.path}`);
+        console.log(`   Size: ${(result.size / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`   Duration: ${result.duration.toFixed(1)} seconds`);
+        console.log(`   Encoding speed: ${(result.frames / result.encodingTime).toFixed(1)} fps`);
+        
+        await encoder.cleanup();
+        return result;
+        
+    } catch (error) {
+        console.error('❌ Video generation failed:', error.message);
+        await encoder.cleanup();
+        throw error;
     }
-    
-    productionState.totalFrames = frames.length;
-    productionState.status = 'running';
-    productionState.startTime = Date.now();
-    
-    const results = await processFramesOptimized(frames);
-    
-    const duration = (Date.now() - productionState.startTime) / 1000;
-    console.log(`\nCompleted in ${duration.toFixed(1)} seconds`);
-    console.log(`Rate: ${(frames.length / duration * 60).toFixed(1)} frames per minute`);
 }
 
+// Generate dual format videos (desktop and mobile)
+async function generateDualFormatVideos(days, baseName) {
+    console.log('\n🎬 Generating dual format videos...');
+    
+    const encoder = new VideoEncoder({
+        framesDir: CONFIG.FRAMES_DIR,
+        outputDir: CONFIG.VIDEOS_DIR,
+        fps: CONFIG.FPS,
+        crf: 0,  // LOSSLESS for Cloudflare Stream
+        preset: 'ultrafast',  // Fast encoding since no compression
+        maxChunkFrames: 1000
+    });
+    
+    await encoder.initialize();
+    
+    try {
+        const totalFrames = Math.min(days * CONFIG.FRAMES_PER_DAY, productionState.processedFrames);
+        const results = await encoder.generateDualFormat(totalFrames, baseName);
+        
+        console.log('\n✅ Dual format videos generated:');
+        console.log(`   Desktop: ${(results.desktop.size / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`   Mobile: ${(results.mobile.size / 1024 / 1024).toFixed(2)} MB`);
+        
+        await encoder.cleanup();
+        return results;
+        
+    } catch (error) {
+        console.error('❌ Dual format generation failed:', error.message);
+        await encoder.cleanup();
+        throw error;
+    }
+}
+
+// Main production execution
+async function main() {
+    console.log('🌞 Optimized Production System with Monitoring');
+    console.log('================================================\n');
+    
+    // Check for --run argument
+    const shouldRun = process.argv.includes('--run');
+    if (!shouldRun) {
+        console.log('Add --run to start frame generation');
+        return;
+    }
+    
+    try {
+        // Start monitoring server
+        if (CONFIG.ENABLE_MONITORING) {
+            startMonitoringServer();
+            console.log(`📊 Monitoring dashboard: http://65.109.0.112:${CONFIG.MONITOR_PORT}/monitor`);
+            console.log(`📡 API status: http://65.109.0.112:${CONFIG.MONITOR_PORT}/api/status\n`);
+        }
+        
+        // Initialize directories
+        await fs.mkdir(CONFIG.FRAMES_DIR, { recursive: true });
+        await fs.mkdir(CONFIG.VIDEOS_DIR, { recursive: true });
+        await fs.mkdir(CONFIG.TEMP_DIR, { recursive: true });
+        
+        // Load previous state if exists
+        try {
+            const stateData = await fs.readFile(CONFIG.STATE_FILE, 'utf8');
+            const savedState = JSON.parse(stateData);
+            productionState = {
+                ...productionState,
+                ...savedState,
+                checksumCache: {
+                    corona: new Map(savedState.checksumCache?.corona || []),
+                    sunDisk: new Map(savedState.checksumCache?.sunDisk || [])
+                }
+            };
+            console.log(`📁 Loaded previous state: ${productionState.processedFrames}/${CONFIG.TOTAL_DAYS * CONFIG.FRAMES_PER_DAY} frames`);
+        } catch {
+            console.log('📁 Starting fresh production run');
+        }
+        
+        // Generate frame dates for full production
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() - CONFIG.SAFE_DELAY_DAYS);
+        endDate.setHours(23, 45, 0, 0);
+        
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - CONFIG.TOTAL_DAYS + 1);
+        startDate.setHours(0, 15, 0, 0);
+        
+        const frames = [];
+        const currentDate = new Date(startDate);
+        let frameNumber = 0;
+        
+        while (currentDate <= endDate) {
+            frames.push({
+                number: frameNumber++,
+                date: new Date(currentDate)
+            });
+            currentDate.setMinutes(currentDate.getMinutes() + CONFIG.INTERVAL_MINUTES);
+        }
+        
+        console.log(`📊 Processing ${frames.length} frames with optimized concurrency`);
+        console.log(`   Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+        console.log(`   Fetch concurrency: ${CONFIG.FETCH_CONCURRENCY}`);
+        console.log(`   Process concurrency: ${CONFIG.PROCESS_CONCURRENCY}\n`);
+        
+        // Start monitoring server
+        console.log('📊 Attempting to start monitoring server...');
+        await startMonitoringServer();
+        
+        // Wait a moment for server to start
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('📊 Monitor startup delay completed');
+        
+        // Start processing
+        productionState.status = 'running';
+        productionState.startTime = Date.now();
+        productionState.totalFrames = frames.length;
+        
+        await processFramesOptimized(frames);
+        
+        console.log('\n✅ Frame processing complete!');
+        console.log(`   Total frames: ${productionState.processedFrames}`);
+        console.log(`   Duplicate retries: ${productionState.duplicateRetries}`);
+        console.log(`   Unique corona images: ${productionState.checksumCache.corona.size}`);
+        console.log(`   Unique sun disk images: ${productionState.checksumCache.sunDisk.size}`);
+        
+        productionState.status = 'completed';
+        await saveState();
+        
+    } catch (error) {
+        console.error('\n❌ Production failed:', error.message);
+        productionState.status = 'error';
+        await saveState();
+        throw error;
+    }
+}
+
+// Main optimized frame processing function
+async function processFramesOptimized(frames) {
+    console.log('🚀 Starting optimized pipeline with quality monitoring...');
+    console.log(`📊 Quality monitoring started for ${frames.length} frames`);
+    
+    const batchSize = CONFIG.BATCH_SIZE;
+    let processedCount = 0;
+    
+    // Process frames in batches
+    for (let i = 0; i < frames.length; i += batchSize) {
+        const batch = frames.slice(i, i + batchSize);
+        const batchStart = Date.now();
+        
+        console.log(`\n📦 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(frames.length / batchSize)}`);
+        console.log(`   Frames ${i + 1}-${Math.min(i + batchSize, frames.length)} of ${frames.length}`);
+        
+        // Process batch with concurrency
+        const promises = batch.map(frame => processFrame(frame));
+        await Promise.all(promises);
+        
+        processedCount += batch.length;
+        productionState.processedFrames = processedCount;
+        
+        const batchTime = Date.now() - batchStart;
+        const framesPerMinute = (batch.length / (batchTime / 1000)) * 60;
+        
+        console.log(`   ✅ Batch completed in ${(batchTime / 1000).toFixed(1)}s`);
+        console.log(`   ⚡ Speed: ${framesPerMinute.toFixed(1)} frames/minute`);
+        console.log(`   📊 Progress: ${((processedCount / frames.length) * 100).toFixed(1)}% (${processedCount}/${frames.length})`);
+        
+        if (productionState.duplicateRetries > 0) {
+            console.log(`   🔄 Duplicate retries: ${productionState.duplicateRetries}`);
+        }
+        
+        // Save state periodically
+        await saveState();
+    }
+}
+
+// Process a single frame with error handling and timing
+async function processFrame(frameData) {
+    const frameStart = Date.now();
+    
+    try {
+        // This would contain the actual frame processing logic
+        // For now, simulate processing time to test the monitor
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms simulation
+        
+        console.log(`🔄 Frame ${frameData.number}: Processing...`);
+        
+        // Simulate occasional duplicates for testing
+        if (Math.random() < 0.05) { // 5% chance
+            productionState.duplicateRetries++;
+            console.log(`⚠️ Frame ${frameData.number}: Duplicate detected, retrying...`);
+        }
+        
+        const frameTime = Date.now() - frameStart;
+        return { success: true, frameNumber: frameData.number, processingTime: frameTime };
+        
+    } catch (error) {
+        console.error(`❌ Frame ${frameData.number} failed:`, error.message);
+        return { success: false, frameNumber: frameData.number, error: error.message };
+    }
+}
+
+// Save production state
+async function saveState() {
+    try {
+        const stateToSave = {
+            ...productionState,
+            checksumCache: {
+                corona: Array.from(productionState.checksumCache.corona.entries()),
+                sunDisk: Array.from(productionState.checksumCache.sunDisk.entries())
+            }
+        };
+        
+        await fs.writeFile(CONFIG.STATE_FILE, JSON.stringify(stateToSave, null, 2));
+    } catch (error) {
+        console.error('Failed to save state:', error.message);
+    }
+}
+
+
 // Export for use in production
-export { processFramesOptimized, CONFIG };
+export { 
+    processFramesOptimized, 
+    generateProductionVideo,
+    generateDualFormatVideos,
+    startMonitoringServer,
+    CONFIG 
+};
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {

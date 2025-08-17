@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heliosphere Live Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.1);
+            height: 60px;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            height: 100%;
+            border-radius: 30px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .status-running { background: #4CAF50; }
+        .status-completed { background: #9C27B0; }
+        .status-idle { background: #2196F3; }
+        .status-error { background: #f44336; }
+        
+        .info-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .error-box {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            font-size: 0.9em;
+        }
+        
+        .connected { background: rgba(76, 175, 80, 0.3); }
+        .disconnected { background: rgba(244, 67, 54, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">
+        Connecting...
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🌞 Heliosphere Live Monitor</h1>
+            <p>Real-time monitoring of solar timelapse generation</p>
+            <div class="status-badge" id="statusBadge">Loading...</div>
+        </div>
+        
+        <div class="progress-container">
+            <h2 style="margin-bottom: 20px;">Overall Progress</h2>
+            <div class="progress-bar-bg">
+                <div class="progress-bar" id="progressBar" style="width: 0%">
+                    0%
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <span><span id="processedFrames">0</span> / <span id="totalFrames">0</span> frames</span>
+                <span>Runtime: <span id="runtime">0</span>s</span>
+                <span>ETA: <span id="eta">calculating...</span></span>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Frames Processed</div>
+                <div class="stat-value" id="statProcessed">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Fetched</div>
+                <div class="stat-value" id="statFetched">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Rate</div>
+                <div class="stat-value" id="statRate">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Errors</div>
+                <div class="stat-value" id="statErrors">0</div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3 style="margin-bottom: 15px;">Details</h3>
+            <div class="info-row">
+                <span>Date Range:</span>
+                <span id="dateRange">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span>Fallbacks Used:</span>
+                <span id="fallbacks">0</span>
+            </div>
+            <div class="info-row">
+                <span>Interpolated Frames:</span>
+                <span id="interpolated">0</span>
+            </div>
+            <div class="info-row">
+                <span>Corona Checksums:</span>
+                <span id="coronaChecksums">0</span>
+            </div>
+            <div class="info-row">
+                <span>Sun Disk Checksums:</span>
+                <span id="sunChecksums">0</span>
+            </div>
+            <div class="info-row">
+                <span>Videos Generated:</span>
+                <span id="videos">None yet</span>
+            </div>
+        </div>
+        
+        <div class="error-box" id="errorBox">
+            <h3>Errors</h3>
+            <div id="errorList"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration - CHANGE THIS IF NEEDED
+        const API_HOST = '65.109.0.112';
+        const API_PORT = '3002';  // Test port
+        const API_URL = `http://${API_HOST}:${API_PORT}/status`;
+        
+        let lastProcessed = 0;
+        let startTime = Date.now();
+        
+        async function fetchStatus() {
+            const connStatus = document.getElementById('connectionStatus');
+            
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Failed to fetch');
+                
+                const data = await response.json();
+                connStatus.textContent = '🟢 Connected';
+                connStatus.className = 'connection-status connected';
+                
+                updateDisplay(data);
+            } catch (error) {
+                console.error('Connection error:', error);
+                connStatus.textContent = '🔴 Disconnected';
+                connStatus.className = 'connection-status disconnected';
+            }
+        }
+        
+        function updateDisplay(data) {
+            // Status
+            const status = data.status || 'unknown';
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = status.toUpperCase();
+            statusBadge.className = `status-badge status-${status}`;
+            
+            // Progress
+            const processed = data.processedFrames || 0;
+            const total = data.totalFrames || 1;
+            const progress = (processed / total * 100).toFixed(1);
+            
+            document.getElementById('processedFrames').textContent = processed;
+            document.getElementById('totalFrames').textContent = total;
+            document.getElementById('statProcessed').textContent = processed;
+            document.getElementById('statFetched').textContent = data.fetchedFrames || 0;
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${progress}%`;
+            
+            if (status === 'running') {
+                progressBar.classList.add('pulse');
+            } else {
+                progressBar.classList.remove('pulse');
+            }
+            
+            // Runtime and ETA
+            const runtime = parseFloat(data.runtime) || 0;
+            document.getElementById('runtime').textContent = Math.floor(runtime);
+            
+            if (processed > 0 && runtime > 0) {
+                const rate = processed / runtime;
+                const remaining = total - processed;
+                const eta = remaining / rate;
+                const etaMin = Math.floor(eta / 60);
+                const etaSec = Math.floor(eta % 60);
+                document.getElementById('eta').textContent = 
+                    eta > 0 ? `${etaMin}m ${etaSec}s` : 'Complete';
+                
+                // Frames per minute
+                const framesPerMin = (rate * 60).toFixed(1);
+                document.getElementById('statRate').textContent = `${framesPerMin}/m`;
+            } else {
+                document.getElementById('eta').textContent = 'calculating...';
+                document.getElementById('statRate').textContent = '0/m';
+            }
+            
+            // Date range
+            if (data.dateRange && data.dateRange.start && data.dateRange.end) {
+                const start = new Date(data.dateRange.start).toLocaleDateString();
+                const end = new Date(data.dateRange.end).toLocaleDateString();
+                document.getElementById('dateRange').textContent = `${start} - ${end}`;
+            }
+            
+            // Details
+            document.getElementById('fallbacks').textContent = data.fallbacksUsed || 0;
+            document.getElementById('interpolated').textContent = data.interpolatedFrames || 0;
+            document.getElementById('coronaChecksums').textContent = data.checksums?.corona || 0;
+            document.getElementById('sunChecksums').textContent = data.checksums?.sunDisk || 0;
+            
+            // Videos
+            const videos = [];
+            if (data.videos?.full) videos.push('Full');
+            if (data.videos?.social) videos.push('Social');
+            document.getElementById('videos').textContent = 
+                videos.length > 0 ? videos.join(', ') : 'None yet';
+            
+            // Errors
+            const errors = data.errors || [];
+            document.getElementById('statErrors').textContent = errors.length;
+            
+            if (errors.length > 0) {
+                document.getElementById('errorBox').style.display = 'block';
+                const errorList = document.getElementById('errorList');
+                errorList.innerHTML = errors.slice(-5).map(e => 
+                    `<div style="margin: 5px 0;">Frame ${e.frame || 'N/A'}: ${e.error || e.message}</div>`
+                ).join('');
+            }
+        }
+        
+        // Initial fetch
+        fetchStatus();
+        
+        // Update every 2 seconds
+        setInterval(fetchStatus, 2000);
+        
+        // Show API endpoint
+        console.log('Monitoring:', API_URL);
+    </script>
+</body>
+</html>

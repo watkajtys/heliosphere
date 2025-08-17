@@ -17,34 +17,61 @@ class FrameQualityValidator {
             width: 1460,
             height: 1200,
             
-            // Brightness thresholds (0-255 scale)
-            minBrightness: 10,
-            maxBrightness: 245,
-            avgBrightnessRange: [30, 150],
+            // Critical sun disk validation
+            expectedSunDiskSize: 1435,  // CRITICAL: Must be 1435px
+            sunDiskTolerance: 50,        // Allow ±50px variance
             
-            // File size thresholds (in KB)
-            minFileSize: 100,
-            maxFileSize: 300,
+            // Brightness thresholds (0-255 scale) - RELAXED for real data
+            minBrightness: 10,      // Very dark is ok for space
+            maxBrightness: 250,     // Allow some bright spots
+            avgBrightnessRange: [20, 200],  // Wide range for variability
+            coronaBrightnessRange: [15, 150],  // Corona can vary
+            sunDiskBrightnessRange: [60, 220], // Sun disk can be bright
+            
+            // File size thresholds (in KB) - MINIMAL CHECKS
+            minFileSize: 10,        // Just check file isn't empty/corrupt
+            maxFileSize: 10000,     // 10MB - basically no limit
+            targetFileSize: 500,    // Not enforced, just for stats
             
             // Color validation
             expectedChannels: 3,
+            colorBalanceTolerance: 0.3,  // R/G/B ratio tolerance
             
             // Histogram thresholds
-            blackPixelThreshold: 0.5,  // Max 50% black pixels
-            whitePixelThreshold: 0.1,  // Max 10% white pixels
+            blackPixelThreshold: 0.4,   // Max 40% black pixels
+            whitePixelThreshold: 0.05,  // Max 5% white pixels
             
             // Temporal consistency (frame-to-frame)
-            maxTemporalDelta: 0.15,    // 15% max change between frames
+            maxTemporalDelta: 0.12,     // 12% max change between frames
+            duplicateThreshold: 0.98,    // 98% similarity = duplicate
             
             // Quality scores
-            minSharpness: 0.3,
-            minContrast: 0.2,
+            minSharpness: 0.4,
+            minContrast: 0.25,
+            minEntropy: 4.5,  // Information content
+            
+            // Spot check settings
+            spotCheckInterval: 100,      // Check every 100 frames
+            spotCheckSampleSize: 5,      // Sample 5 frames around spot
+            
+            // Quality scoring weights
+            weights: {
+                dimensions: 0.15,
+                brightness: 0.20,
+                contrast: 0.15,
+                fileSize: 0.10,
+                sharpness: 0.15,
+                temporal: 0.15,
+                colorBalance: 0.10
+            },
             
             ...config
         };
         
         this.frameCache = new Map();
         this.baselineMetrics = null;
+        this.qualityHistory = [];
+        this.issuesFound = [];
     }
     
     /**
@@ -474,9 +501,143 @@ class FrameQualityValidator {
         
         return report.join('\n');
     }
+    
+    /**
+     * Perform programmatic spot checks on production frames
+     */
+    async performSpotChecks(framesDir, totalFrames) {
+        console.log('\n🔍 Performing Programmatic Quality Spot Checks');
+        console.log('=' .repeat(50));
+        
+        const results = {
+            checks: [],
+            passed: 0,
+            failed: 0,
+            warnings: 0,
+            criticalIssues: [],
+            scores: [],
+            overallPass: false
+        };
+        
+        // Calculate spot check frames
+        const framesToCheck = [];
+        for (let i = 0; i < totalFrames; i += this.config.spotCheckInterval) {
+            framesToCheck.push(i);
+            // Add a few surrounding frames for temporal checks
+            if (i > 0) framesToCheck.push(i - 1);
+            if (i < totalFrames - 1) framesToCheck.push(i + 1);
+        }
+        
+        console.log(`\n📊 Checking ${framesToCheck.length} frames out of ${totalFrames}`);
+        console.log(`   Coverage: ${(framesToCheck.length / totalFrames * 100).toFixed(1)}%\n`);
+        
+        // Validate each frame
+        for (const frameNum of framesToCheck) {
+            const framePath = path.join(framesDir, `frame_${String(frameNum).padStart(5, '0')}.jpg`);
+            
+            try {
+                const validation = await this.validateFrame(framePath, frameNum);
+                
+                results.checks.push({
+                    frame: frameNum,
+                    score: validation.score,
+                    valid: validation.valid,
+                    issues: validation.issues
+                });
+                
+                results.scores.push(validation.score);
+                
+                if (validation.valid && validation.score >= 70) {
+                    results.passed++;
+                    if (frameNum % 500 === 0) {
+                        console.log(`  ✅ Frame ${frameNum}: Score ${validation.score.toFixed(1)}`);
+                    }
+                } else if (validation.score >= 50) {
+                    results.warnings++;
+                    console.log(`  ⚠️ Frame ${frameNum}: Score ${validation.score.toFixed(1)}`);
+                    validation.issues.forEach(i => {
+                        if (i.severity === 'warning') {
+                            console.log(`     - ${i.message}`);
+                        }
+                    });
+                } else {
+                    results.failed++;
+                    console.log(`  ❌ Frame ${frameNum}: Score ${validation.score.toFixed(1)}`);
+                    validation.issues.forEach(i => {
+                        console.log(`     - [${i.severity}] ${i.message}`);
+                        if (i.severity === 'critical') {
+                            results.criticalIssues.push({
+                                frame: frameNum,
+                                issue: i.message
+                            });
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                results.failed++;
+                console.error(`  ❌ Frame ${frameNum}: ${error.message}`);
+                results.criticalIssues.push({
+                    frame: frameNum,
+                    issue: error.message
+                });
+            }
+        }
+        
+        // Calculate statistics
+        const avgScore = results.scores.reduce((a, b) => a + b, 0) / results.scores.length;
+        const minScore = Math.min(...results.scores);
+        const maxScore = Math.max(...results.scores);
+        const passRate = (results.passed / results.checks.length * 100);
+        
+        // Determine overall pass - RELAXED CRITERIA
+        // Pass if average > 65 AND pass rate > 75% AND no more than 2 critical issues
+        results.overallPass = avgScore >= 65 && 
+                             passRate >= 75 && 
+                             results.criticalIssues.length <= 2;
+        
+        // Print summary
+        console.log('\n' + '═'.repeat(50));
+        console.log('📈 QUALITY VALIDATION SUMMARY');
+        console.log('═'.repeat(50));
+        console.log(`  Frames Checked: ${results.checks.length}`);
+        console.log(`  Passed: ${results.passed} (${passRate.toFixed(1)}%)`);
+        console.log(`  Warnings: ${results.warnings}`);
+        console.log(`  Failed: ${results.failed}`);
+        console.log(`  Average Score: ${avgScore.toFixed(1)} (min: ${minScore.toFixed(1)}, max: ${maxScore.toFixed(1)})`);
+        
+        if (results.criticalIssues.length > 0) {
+            console.log(`\n  ⚠️ Critical Issues (${results.criticalIssues.length}):`);
+            results.criticalIssues.slice(0, 5).forEach(issue => {
+                console.log(`     Frame ${issue.frame}: ${issue.issue}`);
+            });
+        }
+        
+        console.log('\n  ' + (results.overallPass ? '✅ QUALITY CHECK PASSED' : '❌ QUALITY CHECK FAILED'));
+        
+        if (!results.overallPass) {
+            console.log('\n  Failure Reasons:');
+            if (avgScore < 65) console.log(`     - Average score too low: ${avgScore.toFixed(1)} < 65`);
+            if (passRate < 75) console.log(`     - Pass rate too low: ${passRate.toFixed(1)}% < 75%`);
+            if (results.criticalIssues.length > 2) {
+                console.log(`     - Too many critical issues: ${results.criticalIssues.length} > 2`);
+            }
+        }
+        
+        return {
+            avgScore,
+            minScore,
+            maxScore,
+            passRate,
+            passed: results.passed,
+            failed: results.failed,
+            warnings: results.warnings,
+            criticalIssues: results.criticalIssues,
+            overallPass: results.overallPass
+        };
+    }
 }
 
-// Export for use in other modules
 export default FrameQualityValidator;
 
 // CLI usage
