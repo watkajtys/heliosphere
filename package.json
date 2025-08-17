@@ -1,20 +1,38 @@
 {
 	"name": "heliosphere",
-	"version": "0.0.0",
+	"version": "2.0.0",
+	"description": "Solar timelapse video generator from NASA satellite data",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"start": "node dist/index.js",
-		"build": "tsc"
+		"start": "node vps_production_optimized.js",
+		"build": "tsc",
+		"test": "node vps_2day_test.js",
+		"test:optimized": "node vps_optimized_test.js",
+		"production": "node vps_production_optimized.js",
+		"production:daily": "node vps_daily_production.js",
+		"upload": "node cloudflare_upload.js",
+		"monitor": "node monitor_server.js",
+		"clean": "rm -rf frames/* videos/* test_videos/*",
+		"lint": "echo 'No linter configured'",
+		"typecheck": "tsc --noEmit"
+	},
+	"engines": {
+		"node": ">=20.0.0",
+		"npm": ">=9.0.0"
 	},
 	"devDependencies": {
 		"@types/express": "^4.17.21",
+		"@types/node": "^20.0.0",
 		"typescript": "^5.5.2"
 	},
 	"dependencies": {
 		"@google-cloud/storage": "^7.16.0",
 		"express": "^4.19.2",
 		"sharp": "^0.33.4",
-		"ws": "^8.17.0"
+		"ws": "^8.17.0",
+		"dotenv": "^16.4.5",
+		"p-queue": "^8.0.0",
+		"pm2": "^5.3.0"
 	}
 }

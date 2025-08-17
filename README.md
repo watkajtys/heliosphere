@@ -187,35 +187,53 @@ const upload = await fetch('https://api.cloudflare.com/client/v4/accounts/{id}/s
 
 ```
 heliosphere/
-├── .env.example                  # Environment variables template
-├── .gitignore                    # Git exclusions
-├── package.json                  # Dependencies
-├── README.md                     # This file
+├── .env.example                      # Environment variables template
+├── .gitignore                        # Git exclusions
+├── package.json                      # Dependencies and scripts
+├── README.md                         # This file
+├── CLAUDE.md                         # Quick reference for development
+├── ARCHITECTURE.md                   # System architecture documentation
+├── DEPLOYMENT.md                     # Deployment guide
 │
-├── Production/
-│   ├── vps_production_optimized.js  # Main production script
-│   ├── vps_optimized_test.js        # Test with monitoring
-│   └── pm2.config.js                 # PM2 configuration
+├── Production Scripts/
+│   ├── vps_production_optimized.js  # Main optimized production (3x faster)
+│   ├── vps_daily_production.js      # Daily production runner
+│   ├── vps_2day_test.js             # 2-day test script
+│   ├── vps_optimized_test.js        # Optimized test with monitoring
+│   └── vps_production_check.js      # Production verification
 │
-├── Upload/
+├── Upload & Deployment/
 │   ├── cloudflare_upload.js         # Stream API upload
-│   ├── deploy_museum_seo.js         # SEO deployment
-│   └── deploy_immersive.js          # Immersive deployment
+│   ├── cloudflare_tus_upload.js     # TUS resumable upload
+│   └── deploy_immersive.js          # Immersive experience deployment
 │
 ├── Monitoring/
 │   ├── monitor_optimized.html       # Real-time dashboard
-│   ├── monitor_server.js            # Express server
+│   ├── monitor_production.html      # Production monitor
+│   ├── monitor_server.js            # Express monitoring server
 │   └── cloud_monitor.html           # Cloud dashboard
 │
-├── Output/
-│   ├── frames/                      # Generated frames
-│   ├── frames_desktop/              # Desktop format
-│   ├── frames_mobile/               # Mobile format
-│   └── videos/                      # Final videos
+├── Image Processing/
+│   ├── composite_functions_fixed.js # Compositing utilities
+│   ├── frame_quality_validator.js   # Quality validation
+│   └── *_feather.js                 # Various feathering implementations
 │
-└── Config/
-    ├── config.js                     # Centralized config
-    └── constants.js                  # Shared constants
+├── Libraries/
+│   ├── lib/
+│   │   ├── video_encoder.js         # FFmpeg video encoding
+│   │   ├── quality_monitor.js       # Quality monitoring
+│   │   ├── memory_manager.js        # Memory optimization
+│   │   └── chunk_processor.js       # Chunked processing
+│
+├── Configuration/
+│   ├── config/
+│   │   └── production.config.js     # Production settings
+│   └── wrangler.toml                 # Cloudflare Workers config
+│
+└── Output/ (generated)
+    ├── frames/                       # Generated frames
+    ├── videos/                       # Production videos
+    └── test_videos/                  # Test videos
 ```
 
 ## 🔧 Configuration

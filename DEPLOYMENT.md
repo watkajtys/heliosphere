@@ -50,17 +50,29 @@ cp .env.example .env
 nano .env
 ```
 
-Required environment variables:
+Required environment variables (see .env.example for full list):
 ```bash
+# Cloudflare API credentials
 CLOUDFLARE_STREAM_TOKEN=your_stream_api_token_here
 CLOUDFLARE_PAGES_TOKEN=your_pages_deployment_token_here
 CLOUDFLARE_ACCOUNT_ID=your_account_id_here
+
+# VPS configuration (if using remote server)
+VPS_HOST=65.109.0.112
+VPS_USER=root
+
+# Production settings
+NODE_ENV=production
+PRODUCTION_DAYS=56
+VIDEO_FPS=24
 ```
 
 ### 4. Run Test Mode
 ```bash
 # Process 2 days of data for testing
-node vps_optimized_test.js
+npm run test
+# or for optimized test:
+npm run test:optimized
 
 # Monitor progress
 open http://localhost:3003/monitor

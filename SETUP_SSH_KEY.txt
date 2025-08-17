@@ -1,0 +1,40 @@
+SSH KEY SETUP FOR VPS
+=====================
+
+To stop entering the password every time:
+
+Option 1: Quick setup (Windows Git Bash or WSL)
+------------------------------------------------
+ssh-copy-id root@65.109.0.112
+(Enter password: AJtha7MkUjkFxV9c7qWC! one last time)
+
+Option 2: Manual setup
+----------------------
+1. Generate key if you don't have one:
+   ssh-keygen -t rsa -b 4096
+
+2. Copy your public key:
+   cat ~/.ssh/id_rsa.pub
+
+3. SSH to server and add key:
+   ssh root@65.109.0.112
+   mkdir -p ~/.ssh
+   echo "YOUR_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+   chmod 600 ~/.ssh/authorized_keys
+   exit
+
+4. Test passwordless login:
+   ssh root@65.109.0.112
+
+Option 3: Use SSH config file
+------------------------------
+Create/edit ~/.ssh/config:
+
+Host vps
+    HostName 65.109.0.112
+    User root
+    IdentityFile ~/.ssh/id_rsa
+
+Then just use: ssh vps
+
+Note: After setting up SSH keys, all our deployments and tests will run much faster!

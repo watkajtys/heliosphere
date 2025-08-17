@@ -1,0 +1,57 @@
+# VPS DEPLOYMENT COMMANDS
+# Server: 65.109.0.112 (builtbyvibes-server)
+
+# Step 1: Copy files to VPS (run from your local machine)
+scp vps_production.js vps_pipeline_test.js cloud_monitor.html package.json package-lock.json root@65.109.0.112:/opt/heliosphere/
+
+# Step 2: SSH into VPS
+ssh root@65.109.0.112
+
+# Step 3: Run these commands on the VPS:
+
+cd /opt/heliosphere
+
+# Create directories
+mkdir -p /opt/heliosphere/output/frames
+mkdir -p /opt/heliosphere/output/logs
+mkdir -p /opt/heliosphere/cache
+mkdir -p /tmp/heliosphere
+
+# Install dependencies
+npm install
+
+# Install PM2 if needed
+npm install -g pm2
+
+# Run the test pipeline (10 frames)
+node vps_pipeline_test.js
+
+# Check test results
+ls -la test_output/
+
+# Start production server with monitoring
+pm2 start vps_production.js --name heliosphere --max-memory-restart 3G
+
+# Save PM2 config
+pm2 save
+pm2 startup
+
+# Check status
+pm2 status
+pm2 logs heliosphere
+
+# Access monitoring dashboard:
+# http://65.109.0.112:3000/monitor
+
+# API endpoints:
+# http://65.109.0.112:3000/status
+# http://65.109.0.112:3000/health
+
+# To generate frames:
+# POST http://65.109.0.112:3000/generate?frames=10
+
+# To stop:
+# pm2 stop heliosphere
+
+# To restart:
+# pm2 restart heliosphere

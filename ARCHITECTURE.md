@@ -106,18 +106,25 @@ fetchQueue.add(() => fetchFrame(date))
 
 #### Image Processing Steps
 1. **Color Grading**
-   - Corona: Blue shift, reduce saturation (0.4)
-   - Sun Disk: Gold shift, enhance saturation (1.8)
+   - Corona: Blue shift, reduce saturation (0.2), gamma 1.6 for dramatic contrast
+   - Sun Disk: Gold shift, enhance saturation (1.4), brightness 1.2
 
-2. **Circular Feathering**
-   - Create radial gradient mask
-   - 40px feather radius
-   - Lanczos3 resampling
+2. **Feathering (Square or Circular)**
+   - **Square Feathering** (current production):
+     - Linear gradient on X and Y axes
+     - 40px feather radius from 400px square boundary
+     - Multiplicative blend for corner smoothing
+   - **Circular Feathering** (alternative):
+     - Radial gradient mask
+     - 40px feather radius
+     - Smooth transition at 400px radius
+   - Both use Lanczos3 resampling for quality
 
 3. **Compositing**
-   - Screen blend mode
-   - Preserve highlights
-   - Final JPEG compression (Q=98)
+   - Screen blend mode for additive light effect
+   - Sun disk size: 1435px (properly scaled)
+   - Final crop: 1460×1200 with tuned offsets (230px left, 117px top)
+   - Final JPEG compression (Q=95-100 with mozjpeg)
 
 ### 3. Quality Validation
 
