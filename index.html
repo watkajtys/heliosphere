@@ -8,29 +8,30 @@
     <title>Heliosphere - Daily Solar Timelapse | Real NASA Satellite Imagery</title>
     <meta name="description" content="Experience the Sun like never before with Heliosphere's daily timelapse videos. Real NASA satellite data from SOHO and SDO, showing 56 days of solar activity in stunning detail.">
     <meta name="keywords" content="solar timelapse, sun video, NASA satellite, SOHO, SDO, solar corona, space weather, heliosphere, solar activity, CME, solar flares">
-    <meta name="author" content="Heliosphere">
+    <meta name="author" content="Matt Watkajtys - BuiltByVibes">
     <meta name="robots" content="index, follow">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://heliosphere.app/">
     <meta property="og:title" content="Heliosphere - Daily Solar Timelapse">
-    <meta property="og:description" content="Watch 56 days of the Sun's activity in 3 minutes. Real NASA satellite imagery updated daily.">
-    <meta property="og:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
+    <meta property="og:description" content="Watch 56 days of the Sun's activity in stunning detail. Real NASA satellite imagery updated daily.">
+    <meta property="og:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/95ecc96fa10047fa8a127aee889b8a85/thumbnails/thumbnail.jpg">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://heliosphere.app/">
     <meta property="twitter:title" content="Heliosphere - Daily Solar Timelapse">
-    <meta property="twitter:description" content="Watch 56 days of the Sun's activity in 3 minutes. Real NASA satellite imagery updated daily.">
-    <meta property="twitter:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
+    <meta property="twitter:description" content="Watch 56 days of the Sun's activity in stunning detail. Real NASA satellite imagery updated daily.">
+    <meta property="twitter:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/95ecc96fa10047fa8a127aee889b8a85/thumbnails/thumbnail.jpg">
+    <meta property="twitter:creator" content="@builtbyvibes">
+    <meta property="twitter:site" content="@builtbyvibes">
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://heliosphere.app/">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>☀️</text></svg>">
-    
     <style>
         * {
             margin: 0;
@@ -41,115 +42,150 @@
         html, body {
             width: 100%;
             height: 100%;
-            background: #000;
             overflow: hidden;
+            background: #000;
         }
         
-        stream {
-            position: fixed;
+        .video-container {
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            transition: all 0.3s ease;
+            width: 100%;
+            height: 100%;
+        }
+        
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FFD700;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 1.2em;
+            text-align: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
-    <stream 
-        src="23033e88e44f4dd58d25e113fb199b82"
-        controls
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="auto"
-        defaultTextTrack="off"
-        poster="https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg">
-    </stream>
+    <div class="video-container" id="videoContainer">
+        <div class="loading">☀️</div>
+    </div>
     
-    <script 
-        data-cfasync="false" 
-        defer 
-        type="text/javascript" 
-        src="https://embed.cloudflarestream.com/embed/r4xu.fla9.latest.js">
+    <script>
+        // Video IDs from Cloudflare (Updated: 2025-08-19)
+        const VIDEO_IDS = {
+            desktop: 'ecc7a58c6cea4a315257e1701b4b9823',
+            mobile: '90c2570ebb09cc12679f12a6d0ea3a9f'
+        };
+        
+        const CLOUDFLARE_SUBDOMAIN = 'customer-931z4aajcqul6afi.cloudflarestream.com';
+        
+        function detectDevice() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const aspectRatio = window.innerWidth / window.innerHeight;
+            
+            // Use mobile video for:
+            // 1. Mobile devices in portrait
+            // 2. Any device with portrait aspect ratio < 0.75 (taller than 3:4)
+            if ((isMobile && isPortrait) || aspectRatio < 0.75) {
+                return 'mobile';
+            }
+            
+            return 'desktop';
+        }
+        
+        function loadVideo() {
+            const device = detectDevice();
+            const videoId = VIDEO_IDS[device];
+            const container = document.getElementById('videoContainer');
+            
+            console.log(`Loading ${device} video: ${videoId}`);
+            
+            // Create iframe with autoplay, loop, no controls, muted (for autoplay to work)
+            // Quality is automatically highest available in Cloudflare Stream
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://${CLOUDFLARE_SUBDOMAIN}/${videoId}/iframe?autoplay=true&loop=true&muted=true&controls=false&defaultTextTrack=off&preload=auto`;
+            iframe.allow = 'accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;';
+            iframe.allowFullscreen = true;
+            iframe.setAttribute('loading', 'eager');
+            
+            // Clear container and add iframe
+            container.innerHTML = '';
+            container.appendChild(iframe);
+        }
+        
+        // Load video on page load
+        window.addEventListener('DOMContentLoaded', loadVideo);
+        
+        // Reload on orientation change (with debouncing)
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const newDevice = detectDevice();
+                const currentSrc = document.querySelector('iframe')?.src || '';
+                const currentId = currentSrc.match(/\/([a-f0-9]{32})\/iframe/)?.[1];
+                
+                // Only reload if device type changed
+                if (currentId && currentId !== VIDEO_IDS[newDevice]) {
+                    loadVideo();
+                }
+            }, 250);
+        });
+        
+        // Prevent zoom on double tap (mobile)
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        });
+        
+        // Prevent right-click context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
     </script>
     
     <script>
-        function optimizeVideoSize() {
-            const stream = document.querySelector('stream');
-            if (!stream) return;
-            
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            const videoAspect = 1460 / 1200; // 1.217
-            const screenAspect = vw / vh;
-            
-            // Calculate how much we can scale up without losing the sun
-            const sunDiskRatio = 0.7; // Sun disk is ~70% of video height
-            
-            if (screenAspect < 0.7) { // Portrait mode
-                // Add 5% padding top and bottom
-                const targetHeight = vh * 0.9; // 90% of viewport height
-                const targetWidth = targetHeight * videoAspect;
-                
-                stream.style.height = `${targetHeight}px`;
-                stream.style.width = `${targetWidth}px`;
-                stream.style.top = '50%';
-                stream.style.left = '50%';
-                stream.style.transform = 'translate(-50%, -50%)';
-            } else {
-                // Landscape: fit nicely
-                if (screenAspect > videoAspect) {
-                    // Screen wider than video
-                    stream.style.height = '100vh';
-                    stream.style.width = `${vh * videoAspect}px`;
-                    stream.style.top = '0';
-                    stream.style.left = '50%';
-                    stream.style.transform = 'translateX(-50%)';
-                } else {
-                    // Screen taller than video  
-                    stream.style.width = '100vw';
-                    stream.style.height = `${vw / videoAspect}px`;
-                    stream.style.top = '50%';
-                    stream.style.left = '0';
-                    stream.style.transform = 'translateY(-50%)';
-                }
-            }
-        }
-        
-        // Run on load and resize
-        window.addEventListener('load', optimizeVideoSize);
-        window.addEventListener('resize', optimizeVideoSize);
-        window.addEventListener('orientationchange', () => {
-            setTimeout(optimizeVideoSize, 100);
-        });
-        
-        // Also run immediately in case stream is already loaded
-        optimizeVideoSize();
-    </script>
-    
-    <!-- Structured Data for SEO -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
-        "name": "Heliosphere Solar Timelapse - 56 Days of Solar Activity",
-        "description": "Daily timelapse video of the Sun showing 56 days of solar activity from NASA's SOHO and SDO satellites",
-        "thumbnailUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/thumbnails/thumbnail.jpg",
-        "uploadDate": "2024-12-15",
-        "duration": "PT8S",
-        "contentUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/manifest/video.m3u8",
-        "embedUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/23033e88e44f4dd58d25e113fb199b82/iframe",
-        "publisher": {
-            "@type": "Organization",
-            "name": "Heliosphere",
-            "logo": {
-                "@type": "ImageObject",
-                "url": "https://heliosphere.app/logo.png"
-            }
-        }
-    }
+    // Console signature with Ad Astra color palette
+    console.log(`
+%c
+██████╗ ██╗   ██╗██╗██╗  ████████╗    ██████╗ ██╗   ██╗    ██╗   ██╗██╗██████╗ ███████╗███████╗
+██╔══██╗██║   ██║██║██║  ╚══██╔══╝    ██╔══██╗╚██╗ ██╔╝    ██║   ██║██║██╔══██╗██╔════╝██╔════╝
+██████╔╝██║   ██║██║██║     ██║       ██████╔╝ ╚████╔╝     ██║   ██║██║██████╔╝█████╗  ███████╗
+██╔══██╗██║   ██║██║██║     ██║       ██╔══██╗  ╚██╔╝      ╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚════██║
+██████╔╝╚██████╔╝██║███████╗██║       ██████╔╝   ██║        ╚████╔╝ ██║██████╔╝███████╗███████║
+╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝       ╚═════╝    ╚═╝         ╚═══╝  ╚═╝╚═════╝ ╚══════╝╚══════╝
+
+%c☀️ HELIOSPHERE %c· Daily Solar Timelapse from NASA Satellites
+%c✨ Experience the Sun like never before with real NASA satellite data from SOHO and SDO, showing 56 days of solar activity in stunning detail
+%c👨‍🚀 Built by Matt Watkajtys
+%c📧 hello@vibes.dev · 𝕏 twitter.com/builtbyvibes · github.com/builtbyvibes
+`, 
+    'color: #4A6B8A; text-shadow: 0 0 8px rgba(74, 107, 138, 0.3); font-weight: bold; font-family: monospace; line-height: 1.2;',
+    'color: #D4640A; text-shadow: 0 0 15px rgba(212, 100, 10, 0.5); font-size: 16px; font-weight: bold;',
+    'color: #5A7A95; font-size: 14px;',
+    'color: #FFA500; font-size: 13px; font-weight: bold;',
+    'color: #CC7A33; font-size: 12px;'
+    );
     </script>
 </body>
 </html>

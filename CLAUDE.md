@@ -18,14 +18,14 @@ ssh vps  # or ssh root@65.109.0.112
 
 ## Important Commands
 
-### Run 2-Day Test
+### Run 2-Day Test (Unified Script)
 ```bash
-ssh vps "cd /opt/heliosphere && node vps_2day_test.js"
+ssh vps "cd /opt/heliosphere && node vps_unified_test.js --run"
 ```
 
-### Run Full Production (56 days)
+### Run Full Production (56 days) - NEW UNIFIED SCRIPT
 ```bash
-ssh vps "cd /opt/heliosphere && pm2 start vps_daily_production.js --name heliosphere-daily -- --run"
+ssh vps "cd /opt/heliosphere && pm2 start vps_production_unified.js --name heliosphere-unified -- --run"
 ```
 
 ### Check Status
@@ -71,9 +71,10 @@ const apiUrl = `https://api.helioviewer.org/v2/takeScreenshot/?` +
 - **Full run (optimized)**: ~3.5 hours for 5,376 frames
 
 ## File Locations
-- **Production script**: `/opt/heliosphere/vps_daily_production.js`
+- **UNIFIED script (RECOMMENDED)**: `/opt/heliosphere/vps_production_unified.js`
+- **Original production**: `/opt/heliosphere/vps_daily_production.js`
 - **Optimized script**: `/opt/heliosphere/vps_production_optimized.js`
-- **Test script**: `/opt/heliosphere/vps_2day_test.js`
+- **Test scripts**: `/opt/heliosphere/vps_2day_test.js`, `/opt/heliosphere/vps_unified_test.js`
 - **Frames**: `/opt/heliosphere/frames/`
 - **Videos**: `/opt/heliosphere/videos/` and `/opt/heliosphere/test_videos/`
 - **State**: `/opt/heliosphere/daily_state.json`
@@ -88,20 +89,29 @@ npm run typecheck
 ssh vps "cd /opt/heliosphere && ffmpeg -version"
 ```
 
-## Recent Test Results
-- ✅ 2-day test completed successfully (192 frames)
-- ✅ Optimized parallel processing: 3x faster (27.5 fps)
-- ✅ Video quality fixed: proper sun disk sizing (1435px)
-- ✅ Cloudflare Stream upload working
-- ✅ SSH passwordless access configured
+## Recent Production Results (Aug 19, 2025)
+- ✅ Full 56-day production run completed (5376 frames)
+- ✅ Generated all three video formats:
+  - Full: 588MB, 224 seconds (original quality)
+  - Social: 18MB, 60 seconds (for social media)
+  - Portrait: 135MB, 224 seconds (9:16 aspect, CRF 10)
+- ✅ All videos uploaded to Cloudflare Stream
+- ✅ Landing page deployed with responsive video selection
+- ⚠️ Identified highlight blowout issue with screen blend mode
+- 🔄 Planning HDR processing implementation for plasma detail recovery
 
 ## Cloudflare Stream Integration
 ```bash
 # Upload video to Cloudflare (uses token from .env file)
 source .env  # Load environment variables
-node cloudflare_upload.js /path/to/video.mp4 full
+node cloudflare_upload.js /path/to/video.mp4 full  # For files < 100MB
+node cloudflare_tus_upload.js /path/to/video.mp4 full  # For large files
 
-# All credentials and account details are in .env file
+# Current Video IDs (Aug 19, 2025):
+# Full: ecc7a58c6cea4a315257e1701b4b9823
+# Social: 7d0ab32b3b69317b17a2a0c7bc959092
+# Portrait: 90c2570ebb09cc12679f12a6d0ea3a9f
+
 # Account ID: f7e27d63f4766d7fb6a0f5b4789e2cdb
 # Subdomain: customer-931z4aajcqul6afi.cloudflarestream.com
 ```

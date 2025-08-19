@@ -660,12 +660,21 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy', uptime: process.uptime() });
 });
 
-// Serve monitor page using monitor_optimized.html with spot check images
+// Serve monitor page with fallback
 app.get('/monitor', (req, res) => {
     res.sendFile(path.join('/opt/heliosphere', 'monitor_optimized.html'), (err) => {
         if (err) {
-            console.error('Monitor file error:', err);
-            res.status(500).send('Monitor temporarily unavailable');
+            // Try alternative monitor files
+            res.sendFile(path.join('/opt/heliosphere', 'monitor_production.html'), (err2) => {
+                if (err2) {
+                    res.sendFile(path.join('/opt/heliosphere', 'monitor.html'), (err3) => {
+                        if (err3) {
+                            console.error('No monitor file found:', err);
+                            res.status(500).send('Monitor temporarily unavailable');
+                        }
+                    });
+                }
+            });
         }
     });
 });
