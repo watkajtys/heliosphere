@@ -218,3 +218,7 @@ production_html_*.html
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# IDE folders
+.idea/
+.vscode/
