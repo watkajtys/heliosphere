@@ -59,6 +59,11 @@ const CONFIG = {
     MANIFEST_FILE: '/opt/heliosphere/frame_manifest.json',
     TEMP_DIR: '/tmp/heliosphere',
     LOG_DIR: '/opt/heliosphere/logs',
+    LOCK_FILE: '/opt/heliosphere/production.lock',
+    HEALTH_FILE: '/opt/heliosphere/health.json',
+    
+    // Safety limits
+    MIN_DISK_SPACE_GB: 10,  // Minimum free disk space to start
     
     // Timeouts
     FETCH_TIMEOUT: 300000,    // 5 minutes for API calls (API can be slow)
@@ -414,14 +419,14 @@ async function processFrame(frameDate, isRetry = false) {
             CONFIG.FEATHER_RADIUS
         );
         
-        // Create composite with optimized grading
+        // Create composite with brighter, warmer grading
         const composite = await sharp(coronaResult.buffer)
             .modulate({
-                brightness: 1.2,
-                saturation: 0.9
+                brightness: 1.3,    // Brighter sun
+                saturation: 0.95    // Warmer tones
             })
-            .gamma(1.1)
-            .linear(1.25, -5)
+            .gamma(1.05)           // Gentler midtone boost
+            .linear(1.3, -8)       // More punch and contrast
             .composite([{
                 input: featheredSunDisk,
                 top: Math.floor((CONFIG.FRAME_HEIGHT - 1435) / 2),
@@ -727,6 +732,74 @@ async function cleanupOldFrames() {
     }
 }
 
+// Check disk space
+async function checkDiskSpace() {
+    try {
+        const { stdout } = await execAsync("df -BG / | tail -1 | awk '{print $4}'");
+        const freeGB = parseInt(stdout.replace('G', ''));
+        return freeGB;
+    } catch (error) {
+        console.error('Failed to check disk space:', error);
+        return 100; // Assume enough space if check fails
+    }
+}
+
+// Create or check lock file
+async function acquireLock() {
+    try {
+        // Check if lock file exists
+        const exists = await fs.access(CONFIG.LOCK_FILE).then(() => true).catch(() => false);
+        if (exists) {
+            const lockData = await fs.readFile(CONFIG.LOCK_FILE, 'utf-8');
+            const lock = JSON.parse(lockData);
+            const lockAge = Date.now() - lock.timestamp;
+            
+            // If lock is older than 12 hours, assume stale and remove
+            if (lockAge > 12 * 60 * 60 * 1000) {
+                console.log('⚠️ Removing stale lock file (>12 hours old)');
+                await fs.unlink(CONFIG.LOCK_FILE);
+            } else {
+                console.error(`❌ Production already running (PID: ${lock.pid}, started: ${new Date(lock.timestamp).toISOString()})`);
+                return false;
+            }
+        }
+        
+        // Create lock file
+        await fs.writeFile(CONFIG.LOCK_FILE, JSON.stringify({
+            pid: process.pid,
+            timestamp: Date.now(),
+            startTime: new Date().toISOString()
+        }));
+        return true;
+    } catch (error) {
+        console.error('Failed to acquire lock:', error);
+        return false;
+    }
+}
+
+// Release lock file
+async function releaseLock() {
+    try {
+        await fs.unlink(CONFIG.LOCK_FILE);
+    } catch (error) {
+        // Ignore errors when releasing lock
+    }
+}
+
+// Write health check file
+async function writeHealthCheck(status, details = {}) {
+    try {
+        await fs.writeFile(CONFIG.HEALTH_FILE, JSON.stringify({
+            status,
+            timestamp: Date.now(),
+            lastRun: new Date().toISOString(),
+            ...details
+        }, null, 2));
+    } catch (error) {
+        console.error('Failed to write health check:', error);
+    }
+}
+
 // Main production run with comprehensive error handling
 async function runDailyProduction() {
     const startTime = Date.now();
@@ -743,6 +816,21 @@ async function runDailyProduction() {
     console.log(`   Social video: ${CONFIG.SOCIAL_DAYS} days`);
     console.log(`   Parallel fetches: ${CONFIG.FETCH_CONCURRENCY}`);
     console.log('');
+    
+    // Check if already running
+    if (!await acquireLock()) {
+        console.error('❌ Another instance is already running');
+        process.exit(4);
+    }
+    
+    // Check disk space
+    const freeSpace = await checkDiskSpace();
+    console.log(`💾 Free disk space: ${freeSpace}GB`);
+    if (freeSpace < CONFIG.MIN_DISK_SPACE_GB) {
+        console.error(`❌ Insufficient disk space (${freeSpace}GB < ${CONFIG.MIN_DISK_SPACE_GB}GB required)`);
+        await releaseLock();
+        process.exit(5);
+    }
     
     productionState.status = 'running';
     productionState.startTime = startTime;
@@ -810,6 +898,15 @@ async function runDailyProduction() {
         await saveState();
         await saveManifest();
         
+        // Write health check
+        await writeHealthCheck('success', {
+            duration: Math.floor(duration),
+            framesProcessed: productionState.processedFrames,
+            framesSkipped: productionState.skippedFrames,
+            framesFailed: productionState.failedFrames,
+            errors: productionState.errors.length
+        });
+        
     } catch (error) {
         productionState.status = 'error';
         productionState.errors.push({
@@ -829,6 +926,12 @@ async function runDailyProduction() {
         // Save error state
         await saveState().catch(console.error);
         
+        // Write health check
+        await writeHealthCheck('failed', {
+            error: error.message,
+            duration: Math.floor((Date.now() - startTime) / 1000)
+        });
+        
         exitCode = 1;
     }
     
@@ -836,7 +939,8 @@ async function runDailyProduction() {
     const memUsage = process.memoryUsage();
     console.log(`\n💾 Final memory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB used`);
     
-    // Exit with appropriate code
+    // Release lock and exit
+    await releaseLock();
     process.exit(exitCode);
 }
 
@@ -846,6 +950,7 @@ process.on('SIGTERM', async () => {
     productionState.status = 'terminated';
     await saveState().catch(console.error);
     await saveManifest().catch(console.error);
+    await releaseLock();
     process.exit(130);
 });
 
@@ -854,6 +959,7 @@ process.on('SIGINT', async () => {
     productionState.status = 'interrupted';
     await saveState().catch(console.error);
     await saveManifest().catch(console.error);
+    await releaseLock();
     process.exit(130);
 });
 
