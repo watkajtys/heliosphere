@@ -646,6 +646,151 @@ async function generateVideo(days, outputName) {
     }
 }
 
+// Generate portrait video (cropped for mobile)
+async function generatePortraitVideo(days, outputName) {
+    console.log(`\n🎬 Generating ${days}-day portrait video: ${outputName}`);
+    
+    const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mp4`);
+    
+    // Calculate frame range for video
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - CONFIG.SAFE_DELAY_DAYS);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - days + 1);
+    
+    // Create file list for FFmpeg
+    const frameList = [];
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    
+    while (current <= endDate) {
+        const framePath = getFramePath(current);
+        const exists = await fs.access(framePath).then(() => true).catch(() => false);
+        if (exists) {
+            frameList.push(`file '${framePath}'`);
+            frameList.push(`duration ${1.0/CONFIG.FPS}`);
+        }
+        current.setMinutes(current.getMinutes() + CONFIG.INTERVAL_MINUTES);
+    }
+    
+    if (frameList.length === 0) {
+        console.error('❌ No frames found for portrait video generation');
+        return;
+    }
+    
+    // Add last frame without duration
+    frameList.push(`file '${getFramePath(endDate)}'`);
+    
+    console.log(`  📊 Using ${frameList.length / 2} frames`);
+    
+    // Write frame list
+    const listPath = path.join(CONFIG.TEMP_DIR, `${outputName}_list.txt`);
+    await fs.writeFile(listPath, frameList.join('\n'));
+    
+    // Generate portrait video with center crop (900x1200)
+    const ffmpegCmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" ` +
+        `-c:v libx264 -preset veryslow -crf 15 -pix_fmt yuv420p ` +
+        `-vf "fps=${CONFIG.FPS},crop=900:1200:280:0,format=yuv420p" "${outputPath}"`;
+    
+    try {
+        console.log('  ⚙️ Running FFmpeg for portrait (900x1200 crop)...');
+        const { stdout, stderr } = await execAsync(ffmpegCmd, {
+            timeout: CONFIG.VIDEO_TIMEOUT,
+            maxBuffer: 10 * 1024 * 1024
+        });
+        
+        const stats = await fs.stat(outputPath);
+        console.log(`  ✅ Portrait video generated: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+        
+        // Upload to Cloudflare if configured
+        await uploadToCloudflare(outputPath, outputName);
+        
+        // Clean up temp file
+        await fs.unlink(listPath).catch(() => {});
+        
+    } catch (error) {
+        console.error(`  ❌ Portrait video generation failed: ${error.message}`);
+        productionState.errors.push({
+            type: 'video_generation',
+            video: outputName,
+            error: error.message
+        });
+    }
+}
+
+// Generate social media video (square crop, 60 seconds)
+async function generateSocialVideo(days, outputName) {
+    console.log(`\n🎬 Generating ${days}-day social video: ${outputName}`);
+    
+    const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mp4`);
+    
+    // Calculate frame range for video
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - CONFIG.SAFE_DELAY_DAYS);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - days + 1);
+    
+    // Create file list for FFmpeg
+    const frameList = [];
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    
+    while (current <= endDate) {
+        const framePath = getFramePath(current);
+        const exists = await fs.access(framePath).then(() => true).catch(() => false);
+        if (exists) {
+            frameList.push(`file '${framePath}'`);
+            frameList.push(`duration ${1.0/CONFIG.FPS}`);
+        }
+        current.setMinutes(current.getMinutes() + CONFIG.INTERVAL_MINUTES);
+    }
+    
+    if (frameList.length === 0) {
+        console.error('❌ No frames found for social video generation');
+        return;
+    }
+    
+    // Add last frame without duration
+    frameList.push(`file '${getFramePath(endDate)}'`);
+    
+    console.log(`  📊 Using ${frameList.length / 2} frames`);
+    
+    // Write frame list
+    const listPath = path.join(CONFIG.TEMP_DIR, `${outputName}_list.txt`);
+    await fs.writeFile(listPath, frameList.join('\n'));
+    
+    // Generate social video with square crop (1200x1200) and 60 second limit
+    const ffmpegCmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" ` +
+        `-c:v libx264 -preset veryslow -crf 15 -pix_fmt yuv420p ` +
+        `-vf "fps=${CONFIG.FPS},crop=1200:1200:130:0,format=yuv420p" ` +
+        `-t 60 "${outputPath}"`;
+    
+    try {
+        console.log('  ⚙️ Running FFmpeg for social (1200x1200 crop, 60s)...');
+        const { stdout, stderr } = await execAsync(ffmpegCmd, {
+            timeout: CONFIG.VIDEO_TIMEOUT,
+            maxBuffer: 10 * 1024 * 1024
+        });
+        
+        const stats = await fs.stat(outputPath);
+        console.log(`  ✅ Social video generated: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+        
+        // Upload to Cloudflare if configured
+        await uploadToCloudflare(outputPath, outputName);
+        
+        // Clean up temp file
+        await fs.unlink(listPath).catch(() => {});
+        
+    } catch (error) {
+        console.error(`  ❌ Social video generation failed: ${error.message}`);
+        productionState.errors.push({
+            type: 'video_generation',
+            video: outputName,
+            error: error.message
+        });
+    }
+}
+
 // Upload video to Cloudflare Stream
 async function uploadToCloudflare(videoPath, videoName) {
     try {
@@ -850,8 +995,14 @@ async function runDailyProduction() {
         
         // Generate videos only if we have enough frames
         if (productionState.processedFrames + productionState.skippedFrames > 0) {
+            // Generate full desktop video (56 days, 1460x1200)
             await generateVideo(CONFIG.TOTAL_DAYS, 'heliosphere_full');
-            await generateVideo(CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+            
+            // Generate portrait/mobile video (56 days, 900x1200 cropped)
+            await generatePortraitVideo(CONFIG.TOTAL_DAYS, 'heliosphere_portrait');
+            
+            // Generate social media video (30 days, 1200x1200 cropped, 60 seconds)
+            await generateSocialVideo(CONFIG.SOCIAL_DAYS, 'heliosphere_social');
         } else {
             console.error('⚠️ No frames available for video generation');
             exitCode = 2;
