@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Heliosphere Daily Cron Job
+ * Heliosphere Daily Cron Job - Production Ready
  * Runs once daily to generate solar timelapse videos
  * Exits cleanly after completion for cron compatibility
  */
@@ -39,6 +39,8 @@ const CONFIG = {
     FETCH_CONCURRENCY: 8,
     PROCESS_CONCURRENCY: 4,
     BATCH_SIZE: 100,         // Save state every N frames
+    RETRY_ATTEMPTS: 3,       // API retry attempts
+    RETRY_DELAY: 2000,       // Delay between retries (ms)
     
     // Fallback limits
     MAX_FALLBACK_MINUTES: 14, // Stay within frame boundary
@@ -56,7 +58,12 @@ const CONFIG = {
     STATE_FILE: '/opt/heliosphere/daily_state.json',
     MANIFEST_FILE: '/opt/heliosphere/frame_manifest.json',
     TEMP_DIR: '/tmp/heliosphere',
-    LOG_DIR: '/opt/heliosphere/logs'
+    LOG_DIR: '/opt/heliosphere/logs',
+    
+    // Timeouts
+    FETCH_TIMEOUT: 300000,    // 5 minutes for API calls (API can be slow)
+    PROCESS_TIMEOUT: 60000,   // 60 seconds for processing
+    VIDEO_TIMEOUT: 28800000,  // 8 hours for video generation (full production takes ~4hrs fetch + video)
 };
 
 // Global state
@@ -68,7 +75,11 @@ let productionState = {
     dateRange: { start: null, end: null },
     totalFrames: 0,
     processedFrames: 0,
+    skippedFrames: 0,
     fetchedFrames: 0,
+    retriedFrames: 0,      // Successfully retried failed frames
+    abandonedFrames: 0,     // Frames abandoned after 7 days
+    failedFrames: 0,        // Currently failed frames
     interpolatedFrames: 0,
     fallbacksUsed: 0,
     errors: [],
@@ -81,30 +92,42 @@ let productionState = {
 
 // Ensure directories exist
 async function ensureDirectories() {
-    await fs.mkdir(CONFIG.FRAMES_DIR, { recursive: true });
-    await fs.mkdir(CONFIG.VIDEOS_DIR, { recursive: true });
-    await fs.mkdir(CONFIG.TEMP_DIR, { recursive: true });
-    await fs.mkdir(CONFIG.LOG_DIR, { recursive: true });
+    const dirs = [
+        CONFIG.FRAMES_DIR,
+        CONFIG.VIDEOS_DIR,
+        CONFIG.TEMP_DIR,
+        CONFIG.LOG_DIR
+    ];
+    
+    for (const dir of dirs) {
+        await fs.mkdir(dir, { recursive: true });
+    }
 }
 
-// Load state from disk
+// Load state from disk with validation
 async function loadState() {
     try {
         const data = await fs.readFile(CONFIG.STATE_FILE, 'utf-8');
         const saved = JSON.parse(data);
-        // Restore Sets from arrays
+        
+        // Validate and restore Sets from arrays
         if (saved.checksums) {
             saved.checksums.corona = new Set(saved.checksums.corona || []);
             saved.checksums.sunDisk = new Set(saved.checksums.sunDisk || []);
         }
+        
+        // Merge with defaults to ensure all fields exist
         productionState = { ...productionState, ...saved };
-        console.log('📋 Loaded previous state');
-    } catch {
+        console.log(`📋 Loaded previous state (${Object.keys(productionState.frameManifest).length} frames in manifest)`);
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.error('⚠️ Error loading state:', error.message);
+        }
         console.log('📋 Starting fresh state');
     }
 }
 
-// Save state to disk
+// Save state to disk with error handling
 async function saveState() {
     try {
         const toSave = {
@@ -114,27 +137,48 @@ async function saveState() {
                 sunDisk: Array.from(productionState.checksums.sunDisk)
             }
         };
-        await fs.writeFile(CONFIG.STATE_FILE, JSON.stringify(toSave, null, 2));
+        
+        // Write to temp file first then rename (atomic operation)
+        const tempFile = `${CONFIG.STATE_FILE}.tmp`;
+        await fs.writeFile(tempFile, JSON.stringify(toSave, null, 2));
+        await fs.rename(tempFile, CONFIG.STATE_FILE);
     } catch (error) {
-        console.error('Failed to save state:', error);
+        console.error('❌ Failed to save state:', error.message);
+        // Don't throw - continue processing even if state save fails
     }
 }
 
-// Load frame manifest
+// Load frame manifest with validation
 async function loadManifest() {
     try {
         const data = await fs.readFile(CONFIG.MANIFEST_FILE, 'utf-8');
-        productionState.frameManifest = JSON.parse(data);
-        console.log(`📊 Loaded manifest with ${Object.keys(productionState.frameManifest).length} frames`);
-    } catch {
+        const manifest = JSON.parse(data);
+        
+        // Validate manifest structure
+        if (typeof manifest === 'object' && manifest !== null) {
+            productionState.frameManifest = manifest;
+            console.log(`📊 Loaded manifest with ${Object.keys(manifest).length} frames`);
+        } else {
+            throw new Error('Invalid manifest format');
+        }
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.error('⚠️ Error loading manifest:', error.message);
+        }
         productionState.frameManifest = {};
         console.log('📊 Starting new manifest');
     }
 }
 
-// Save frame manifest
+// Save frame manifest with atomic write
 async function saveManifest() {
-    await fs.writeFile(CONFIG.MANIFEST_FILE, JSON.stringify(productionState.frameManifest, null, 2));
+    try {
+        const tempFile = `${CONFIG.MANIFEST_FILE}.tmp`;
+        await fs.writeFile(tempFile, JSON.stringify(productionState.frameManifest, null, 2));
+        await fs.rename(tempFile, CONFIG.MANIFEST_FILE);
+    } catch (error) {
+        console.error('❌ Failed to save manifest:', error.message);
+    }
 }
 
 // Calculate date range with 48-hour delay
@@ -162,8 +206,29 @@ function getFramePath(date) {
     return path.join(CONFIG.FRAMES_DIR, dateStr, `frame_${timeStr}.jpg`);
 }
 
-// Fetch image from API
-async function fetchImage(sourceId, date) {
+// Sleep utility for delays
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Fetch with timeout and retry
+async function fetchWithTimeout(url, timeout = CONFIG.FETCH_TIMEOUT) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout');
+        }
+        throw error;
+    }
+}
+
+// Fetch image from API with retry logic
+async function fetchImage(sourceId, date, attempt = 1) {
     const imageScale = sourceId === 10 ? 1.87 : 2.5;
     const apiParams = new URLSearchParams({
         date: date,
@@ -181,13 +246,24 @@ async function fetchImage(sourceId, date) {
         ? `${CONFIG.CLOUDFLARE_URL}/takeScreenshot?${apiParams}`
         : `https://api.helioviewer.org/v2/takeScreenshot/?${apiParams}`;
     
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    try {
+        const response = await fetchWithTimeout(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        return Buffer.from(buffer);
+        
+    } catch (error) {
+        if (attempt < CONFIG.RETRY_ATTEMPTS) {
+            console.log(`  Retry ${attempt}/${CONFIG.RETRY_ATTEMPTS} for ${sourceId === 4 ? 'corona' : 'sun'}`);
+            await sleep(CONFIG.RETRY_DELAY * attempt);
+            return fetchImage(sourceId, date, attempt + 1);
+        }
+        throw error;
     }
-    
-    const buffer = await response.arrayBuffer();
-    return Buffer.from(buffer);
 }
 
 // Fetch image with fallback logic
@@ -196,11 +272,19 @@ async function fetchImageWithFallback(targetDate, sourceId, sourceType) {
         ? CONFIG.FALLBACK_STEPS_SOHO 
         : CONFIG.FALLBACK_STEPS_SDO;
     
+    let lastError = null;
+    
     for (const minuteOffset of fallbackSteps) {
         const tryDate = new Date(targetDate.getTime() + minuteOffset * 60 * 1000);
         
         try {
             const imageBuffer = await fetchImage(sourceId, tryDate.toISOString());
+            
+            // Validate image buffer
+            if (!imageBuffer || imageBuffer.length < 1000) {
+                throw new Error('Invalid image data received');
+            }
+            
             const checksum = crypto.createHash('md5').update(imageBuffer).digest('hex');
             
             // Check for duplicate
@@ -209,7 +293,7 @@ async function fetchImageWithFallback(targetDate, sourceId, sourceType) {
                 productionState.checksums.sunDisk;
             
             if (checksumSet.has(checksum) && minuteOffset !== 0) {
-                console.log(`⚠️ Duplicate detected at ${minuteOffset} min offset, trying next...`);
+                console.log(`  ⚠️ Duplicate detected at ${minuteOffset} min offset, trying next...`);
                 continue;
             }
             
@@ -217,79 +301,105 @@ async function fetchImageWithFallback(targetDate, sourceId, sourceType) {
             
             if (minuteOffset !== 0) {
                 productionState.fallbacksUsed++;
-                console.log(`✓ Used ${minuteOffset} min fallback for ${sourceType}`);
+                console.log(`  ✓ Used ${minuteOffset} min fallback for ${sourceType}`);
             }
             
             return { buffer: imageBuffer, offset: minuteOffset };
+            
         } catch (error) {
+            lastError = error;
             if (minuteOffset === fallbackSteps[fallbackSteps.length - 1]) {
-                throw error;
+                throw new Error(`All fallback attempts failed for ${sourceType}: ${lastError.message}`);
             }
         }
     }
     
-    throw new Error(`All fallback attempts failed for ${sourceType}`);
+    throw new Error(`All fallback attempts failed for ${sourceType}: ${lastError?.message}`);
 }
 
-// Apply circular feather to sun disk
+// Apply circular feather to sun disk with error handling
 async function applyCircularFeather(imageBuffer, finalSize = 1435, compositeRadius = 400, featherRadius = 40) {
-    const resizedImage = await sharp(imageBuffer)
-        .resize(finalSize, finalSize)
-        .toBuffer();
+    try {
+        const resizedImage = await sharp(imageBuffer)
+            .resize(finalSize, finalSize)
+            .toBuffer();
 
-    if (featherRadius <= 0) {
-        return resizedImage;
+        if (featherRadius <= 0) {
+            return resizedImage;
+        }
+
+        const imageRadius = finalSize / 2;
+        const compositeRatio = compositeRadius / imageRadius;
+        const featherStart = Math.max(0, compositeRadius - featherRadius);
+        const featherStartRatio = featherStart / imageRadius;
+        
+        const svgMask = `
+            <svg width="${finalSize}" height="${finalSize}">
+                <defs>
+                    <radialGradient id="feather" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style="stop-color:white;stop-opacity:1" />
+                        <stop offset="${featherStartRatio * 100}%" style="stop-color:white;stop-opacity:1" />
+                        <stop offset="${compositeRatio * 100}%" style="stop-color:white;stop-opacity:0" />
+                    </radialGradient>
+                </defs>
+                <circle cx="50%" cy="50%" r="50%" fill="url(#feather)" />
+            </svg>
+        `;
+
+        const mask = await sharp(Buffer.from(svgMask)).png().toBuffer();
+
+        const maskedImage = await sharp(resizedImage)
+            .composite([{
+                input: mask,
+                blend: 'dest-in'
+            }])
+            .png()
+            .toBuffer();
+
+        return maskedImage;
+        
+    } catch (error) {
+        console.error('❌ Feathering failed:', error.message);
+        throw error;
     }
-
-    const imageRadius = finalSize / 2;
-    const compositeRatio = compositeRadius / imageRadius;
-    const featherStart = Math.max(0, compositeRadius - featherRadius);
-    const featherStartRatio = featherStart / imageRadius;
-    
-    const svgMask = `
-        <svg width="${finalSize}" height="${finalSize}">
-            <defs>
-                <radialGradient id="feather" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style="stop-color:white;stop-opacity:1" />
-                    <stop offset="${featherStartRatio * 100}%" style="stop-color:white;stop-opacity:1" />
-                    <stop offset="${compositeRatio * 100}%" style="stop-color:white;stop-opacity:0" />
-                </radialGradient>
-            </defs>
-            <circle cx="50%" cy="50%" r="50%" fill="url(#feather)" />
-        </svg>
-    `;
-
-    const mask = await sharp(Buffer.from(svgMask)).png().toBuffer();
-
-    const maskedImage = await sharp(resizedImage)
-        .composite([{
-            input: mask,
-            blend: 'dest-in'
-        }])
-        .png()
-        .toBuffer();
-
-    return maskedImage;
 }
 
-// Process single frame
-async function processFrame(frameDate) {
+// Process single frame with comprehensive error handling
+async function processFrame(frameDate, isRetry = false) {
     const frameKey = getFrameKey(frameDate);
     const framePath = getFramePath(frameDate);
-    
-    // Check if frame already exists
-    if (productionState.frameManifest[frameKey]) {
-        const exists = await fs.access(framePath).then(() => true).catch(() => false);
-        if (exists) {
-            console.log(`✓ Frame exists: ${frameKey}`);
-            return;
-        }
-    }
-    
-    // Ensure directory exists
-    await fs.mkdir(path.dirname(framePath), { recursive: true });
+    const existingEntry = productionState.frameManifest[frameKey];
     
     try {
+        // Check if frame should be processed
+        if (existingEntry) {
+            const exists = await fs.access(framePath).then(() => true).catch(() => false);
+            
+            // Skip if successful and file exists
+            if (existingEntry.status === 'success' && exists) {
+                productionState.skippedFrames++;
+                return;
+            }
+            
+            // Check if failed frame should be abandoned (older than 7 days)
+            if (existingEntry.status === 'failed') {
+                const daysSinceFirst = (Date.now() - existingEntry.firstAttempt) / (1000 * 60 * 60 * 24);
+                if (daysSinceFirst > 7) {
+                    if (existingEntry.status !== 'abandoned') {
+                        existingEntry.status = 'abandoned';
+                        productionState.abandonedFrames++;
+                        console.log(`  ⏭️ Abandoning frame after 7 days: ${frameKey}`);
+                    }
+                    return;
+                }
+                // This is a retry
+                isRetry = true;
+            }
+        }
+        
+        // Ensure directory exists
+        await fs.mkdir(path.dirname(framePath), { recursive: true });
+        
         // Fetch both images
         const [coronaResult, sunDiskResult] = await Promise.all([
             fetchImageWithFallback(frameDate, 4, 'SOHO'),
@@ -324,27 +434,79 @@ async function processFrame(frameDate) {
         // Save frame
         await fs.writeFile(framePath, composite);
         
-        // Update manifest
+        // Update manifest with success
         productionState.frameManifest[frameKey] = {
             path: framePath,
             date: frameDate.toISOString(),
+            status: 'success',
+            firstAttempt: existingEntry?.firstAttempt || Date.now(),
+            lastAttempt: Date.now(),
+            attempts: (existingEntry?.attempts || 0) + 1,
+            lastError: null,
             coronaOffset: coronaResult.offset,
-            sunDiskOffset: sunDiskResult.offset
+            sunDiskOffset: sunDiskResult.offset,
+            size: composite.length,
+            timestamp: Date.now()
         };
         
         productionState.processedFrames++;
-        console.log(`✅ Processed frame ${productionState.processedFrames}/${productionState.totalFrames}`);
+        productionState.fetchedFrames++;
+        
+        if (isRetry) {
+            productionState.retriedFrames++;
+            console.log(`  ✅ Successfully retried frame: ${frameKey}`);
+        }
+        
+        // Log progress every 10 frames
+        if (productionState.processedFrames % 10 === 0) {
+            const progress = ((productionState.processedFrames + productionState.skippedFrames) / productionState.totalFrames * 100).toFixed(1);
+            console.log(`📊 Progress: ${progress}% (${productionState.processedFrames} processed, ${productionState.skippedFrames} skipped)`);
+        }
         
     } catch (error) {
-        console.error(`❌ Failed to process ${frameKey}:`, error.message);
+        console.error(`❌ Failed frame ${frameKey}: ${error.message}`);
+        
+        // Update manifest with failure
+        productionState.frameManifest[frameKey] = {
+            path: framePath,
+            date: frameDate.toISOString(),
+            status: 'failed',
+            firstAttempt: existingEntry?.firstAttempt || Date.now(),
+            lastAttempt: Date.now(),
+            attempts: (existingEntry?.attempts || 0) + 1,
+            lastError: error.message,
+            coronaOffset: null,
+            sunDiskOffset: null,
+            size: 0,
+            timestamp: Date.now()
+        };
+        
+        productionState.failedFrames++;
         productionState.errors.push({
             frame: frameKey,
-            error: error.message
+            error: error.message,
+            timestamp: Date.now()
         });
+        
+        // Don't throw - continue processing other frames
     }
 }
 
-// Process date range in parallel batches
+// Get failed frames that should be retried
+function getFailedFramesToRetry() {
+    const failedFrames = [];
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    
+    for (const [frameKey, entry] of Object.entries(productionState.frameManifest)) {
+        if (entry.status === 'failed' && entry.firstAttempt > sevenDaysAgo) {
+            failedFrames.push(new Date(entry.date));
+        }
+    }
+    
+    return failedFrames;
+}
+
+// Process date range with improved batching
 async function processDateRange() {
     const { startDate, endDate } = calculateDateRange();
     
@@ -353,29 +515,51 @@ async function processDateRange() {
         end: endDate.toISOString()
     };
     
-    console.log(`📅 Processing ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    console.log(`\n📅 Processing ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
     
-    // Generate all frame dates
-    const frameDates = [];
+    // First, get any failed frames that need retrying
+    const failedFramesToRetry = getFailedFramesToRetry();
+    if (failedFramesToRetry.length > 0) {
+        console.log(`🔄 Found ${failedFramesToRetry.length} failed frames to retry (from last 7 days)`);
+    }
+    
+    // Generate all new frame dates
+    const newFrameDates = [];
     const current = new Date(startDate);
     
     while (current <= endDate) {
-        frameDates.push(new Date(current));
+        newFrameDates.push(new Date(current));
         current.setMinutes(current.getMinutes() + CONFIG.INTERVAL_MINUTES);
     }
     
+    // Combine failed frames (process first) with new frames
+    const frameDates = [...failedFramesToRetry, ...newFrameDates];
+    
     productionState.totalFrames = frameDates.length;
     console.log(`📊 Total frames to process: ${productionState.totalFrames}`);
+    console.log(`  - Failed frames to retry: ${failedFramesToRetry.length}`);
+    console.log(`  - New frames: ${newFrameDates.length}`);
+    console.log(`⚡ Batch size: ${CONFIG.FETCH_CONCURRENCY} parallel`);
     
     // Process in parallel batches
     for (let i = 0; i < frameDates.length; i += CONFIG.FETCH_CONCURRENCY) {
         const batch = frameDates.slice(i, i + CONFIG.FETCH_CONCURRENCY);
-        await Promise.all(batch.map(date => processFrame(date)));
+        
+        try {
+            await Promise.all(batch.map(date => processFrame(date)));
+        } catch (error) {
+            console.error(`❌ Batch error: ${error.message}`);
+            // Continue with next batch even if this one fails
+        }
         
         // Save state periodically
         if ((i + CONFIG.FETCH_CONCURRENCY) % CONFIG.BATCH_SIZE === 0) {
             await saveState();
             await saveManifest();
+            
+            // Log memory usage
+            const memUsage = process.memoryUsage();
+            console.log(`💾 Memory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB / ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`);
         }
     }
     
@@ -384,7 +568,7 @@ async function processDateRange() {
     await saveManifest();
 }
 
-// Generate video from frames
+// Generate video from frames with timeout
 async function generateVideo(days, outputName) {
     console.log(`\n🎬 Generating ${days}-day video: ${outputName}`);
     
@@ -405,7 +589,9 @@ async function generateVideo(days, outputName) {
         const framePath = getFramePath(current);
         const exists = await fs.access(framePath).then(() => true).catch(() => false);
         if (exists) {
+            // Use duration to control frame display time
             frameList.push(`file '${framePath}'`);
+            frameList.push(`duration ${1.0/CONFIG.FPS}`);
         }
         current.setMinutes(current.getMinutes() + CONFIG.INTERVAL_MINUTES);
     }
@@ -415,6 +601,11 @@ async function generateVideo(days, outputName) {
         return;
     }
     
+    // Add last frame without duration
+    frameList.push(`file '${getFramePath(endDate)}'`);
+    
+    console.log(`  📊 Using ${frameList.length / 2} frames`);
+    
     // Write frame list
     const listPath = path.join(CONFIG.TEMP_DIR, `${outputName}_list.txt`);
     await fs.writeFile(listPath, frameList.join('\n'));
@@ -422,39 +613,66 @@ async function generateVideo(days, outputName) {
     // Generate video with FFmpeg
     const ffmpegCmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" ` +
         `-c:v libx264 -preset veryslow -crf 15 -pix_fmt yuv420p ` +
-        `-vf "fps=${CONFIG.FPS}" "${outputPath}"`;
+        `-vf "fps=${CONFIG.FPS},format=yuv420p" "${outputPath}"`;
     
     try {
-        await execAsync(ffmpegCmd);
+        console.log('  ⚙️ Running FFmpeg...');
+        const { stdout, stderr } = await execAsync(ffmpegCmd, {
+            timeout: CONFIG.VIDEO_TIMEOUT,
+            maxBuffer: 10 * 1024 * 1024
+        });
+        
         const stats = await fs.stat(outputPath);
-        console.log(`✅ Video generated: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`  ✅ Video generated: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
         
         // Upload to Cloudflare if configured
         await uploadToCloudflare(outputPath, outputName);
         
+        // Clean up temp file
+        await fs.unlink(listPath).catch(() => {});
+        
     } catch (error) {
-        console.error(`❌ Video generation failed:`, error);
+        console.error(`  ❌ Video generation failed: ${error.message}`);
+        productionState.errors.push({
+            type: 'video_generation',
+            video: outputName,
+            error: error.message
+        });
     }
 }
 
 // Upload video to Cloudflare Stream
 async function uploadToCloudflare(videoPath, videoName) {
     try {
-        console.log(`☁️ Uploading to Cloudflare Stream...`);
+        console.log(`  ☁️ Uploading to Cloudflare Stream...`);
         
         const uploadScript = path.join(CONFIG.BASE_DIR, 'cloudflare_tus_upload.js');
         const exists = await fs.access(uploadScript).then(() => true).catch(() => false);
         
         if (!exists) {
-            console.log('⚠️ Cloudflare upload script not found');
+            console.log('  ⚠️ Cloudflare upload script not found, skipping upload');
             return;
         }
         
-        const { stdout } = await execAsync(`node "${uploadScript}" "${videoPath}" "${videoName}"`);
-        console.log(stdout);
+        const { stdout, stderr } = await execAsync(
+            `node "${uploadScript}" "${videoPath}" "${videoName}"`,
+            {
+                timeout: CONFIG.VIDEO_TIMEOUT,
+                maxBuffer: 10 * 1024 * 1024
+            }
+        );
+        
+        if (stdout.includes('Video ID:')) {
+            console.log('  ✅ Upload successful');
+        }
         
     } catch (error) {
-        console.error('❌ Cloudflare upload failed:', error.message);
+        console.error(`  ❌ Cloudflare upload failed: ${error.message}`);
+        productionState.errors.push({
+            type: 'cloudflare_upload',
+            video: videoName,
+            error: error.message
+        });
     }
 }
 
@@ -469,11 +687,28 @@ async function cleanupOldFrames() {
     try {
         const dirs = await fs.readdir(CONFIG.FRAMES_DIR);
         let deletedCount = 0;
+        let freedSpace = 0;
         
         for (const dir of dirs) {
+            // Skip if not a date directory
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dir)) continue;
+            
             const dirDate = new Date(dir);
             if (dirDate < cutoffDate) {
                 const dirPath = path.join(CONFIG.FRAMES_DIR, dir);
+                
+                // Calculate size before deletion
+                try {
+                    const files = await fs.readdir(dirPath);
+                    for (const file of files) {
+                        const filePath = path.join(dirPath, file);
+                        const stats = await fs.stat(filePath);
+                        freedSpace += stats.size;
+                    }
+                } catch (error) {
+                    // Directory might not exist or be accessible
+                }
+                
                 await fs.rm(dirPath, { recursive: true });
                 deletedCount++;
                 console.log(`  Deleted: ${dir}`);
@@ -481,17 +716,18 @@ async function cleanupOldFrames() {
         }
         
         if (deletedCount > 0) {
-            console.log(`✅ Cleaned up ${deletedCount} old directories`);
+            console.log(`✅ Cleaned up ${deletedCount} old directories (${(freedSpace / 1024 / 1024).toFixed(2)} MB freed)`);
         } else {
             console.log('✅ No old frames to clean');
         }
         
     } catch (error) {
-        console.error('❌ Cleanup failed:', error);
+        console.error('❌ Cleanup failed:', error.message);
+        // Don't throw - cleanup failure shouldn't stop the process
     }
 }
 
-// Main production run
+// Main production run with comprehensive error handling
 async function runDailyProduction() {
     const startTime = Date.now();
     
@@ -505,10 +741,13 @@ async function runDailyProduction() {
     console.log(`   Data delay: ${CONFIG.SAFE_DELAY_DAYS} days`);
     console.log(`   Full video: ${CONFIG.TOTAL_DAYS} days`);
     console.log(`   Social video: ${CONFIG.SOCIAL_DAYS} days`);
+    console.log(`   Parallel fetches: ${CONFIG.FETCH_CONCURRENCY}`);
     console.log('');
     
     productionState.status = 'running';
     productionState.startTime = startTime;
+    
+    let exitCode = 0;
     
     try {
         // Ensure directories exist
@@ -521,9 +760,14 @@ async function runDailyProduction() {
         // Process all frames
         await processDateRange();
         
-        // Generate videos
-        await generateVideo(CONFIG.TOTAL_DAYS, 'heliosphere_full');
-        await generateVideo(CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+        // Generate videos only if we have enough frames
+        if (productionState.processedFrames + productionState.skippedFrames > 0) {
+            await generateVideo(CONFIG.TOTAL_DAYS, 'heliosphere_full');
+            await generateVideo(CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+        } else {
+            console.error('⚠️ No frames available for video generation');
+            exitCode = 2;
+        }
         
         // Clean up old frames
         await cleanupOldFrames();
@@ -534,26 +778,45 @@ async function runDailyProduction() {
         const duration = (Date.now() - startTime) / 1000;
         console.log('');
         console.log('╔════════════════════════════════════════╗');
-        console.log('║   Production Completed Successfully     ║');
+        console.log('║   Production Completed                  ║');
         console.log('╚════════════════════════════════════════╝');
         console.log(`⏱️ Duration: ${Math.floor(duration / 60)} min ${Math.floor(duration % 60)} sec`);
         console.log(`📊 Frames processed: ${productionState.processedFrames}`);
+        console.log(`⏭️ Frames skipped: ${productionState.skippedFrames}`);
+        console.log(`🔄 Frames retried: ${productionState.retriedFrames}`);
+        console.log(`❌ Frames failed: ${productionState.failedFrames}`);
+        console.log(`⏸️ Frames abandoned: ${productionState.abandonedFrames}`);
         console.log(`⚠️ Fallbacks used: ${productionState.fallbacksUsed}`);
         console.log(`❌ Errors: ${productionState.errors.length}`);
+        
+        if (productionState.errors.length > 0) {
+            console.log('\nError summary:');
+            const errorTypes = {};
+            productionState.errors.forEach(e => {
+                const type = e.type || 'frame';
+                errorTypes[type] = (errorTypes[type] || 0) + 1;
+            });
+            Object.entries(errorTypes).forEach(([type, count]) => {
+                console.log(`  ${type}: ${count} errors`);
+            });
+            
+            // Exit with warning code if there were errors
+            if (productionState.errors.length > productionState.totalFrames * 0.1) {
+                exitCode = 3; // More than 10% errors
+            }
+        }
         
         // Save final state
         await saveState();
         await saveManifest();
-        
-        // Exit with success code
-        process.exit(0);
         
     } catch (error) {
         productionState.status = 'error';
         productionState.errors.push({
             type: 'fatal',
             message: error.message,
-            stack: error.stack
+            stack: error.stack,
+            timestamp: Date.now()
         });
         
         console.error('');
@@ -564,15 +827,62 @@ async function runDailyProduction() {
         console.error(error.stack);
         
         // Save error state
-        await saveState();
+        await saveState().catch(console.error);
         
-        // Exit with error code
-        process.exit(1);
+        exitCode = 1;
     }
+    
+    // Log final memory usage
+    const memUsage = process.memoryUsage();
+    console.log(`\n💾 Final memory: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB used`);
+    
+    // Exit with appropriate code
+    process.exit(exitCode);
 }
+
+// Set up graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('\n⚠️ SIGTERM received, saving state and shutting down...');
+    productionState.status = 'terminated';
+    await saveState().catch(console.error);
+    await saveManifest().catch(console.error);
+    process.exit(130);
+});
+
+process.on('SIGINT', async () => {
+    console.log('\n⚠️ SIGINT received, saving state and shutting down...');
+    productionState.status = 'interrupted';
+    await saveState().catch(console.error);
+    await saveManifest().catch(console.error);
+    process.exit(130);
+});
+
+// Handle uncaught errors
+process.on('uncaughtException', async (error) => {
+    console.error('💥 Uncaught exception:', error);
+    productionState.errors.push({
+        type: 'uncaught_exception',
+        message: error.message,
+        stack: error.stack,
+        timestamp: Date.now()
+    });
+    await saveState().catch(console.error);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', async (reason, promise) => {
+    console.error('💥 Unhandled rejection at:', promise, 'reason:', reason);
+    productionState.errors.push({
+        type: 'unhandled_rejection',
+        message: String(reason),
+        timestamp: Date.now()
+    });
+    await saveState().catch(console.error);
+    process.exit(1);
+});
 
 // Run immediately
 runDailyProduction().catch(error => {
-    console.error('Unhandled error:', error);
+    console.error('💥 Unhandled error in main:', error);
     process.exit(1);
 });
