@@ -1,6 +1,6 @@
 name = "heliosphere-proxy"
-main = "cloudflare_worker.js"
-compatibility_date = "2024-01-01"
+main = "cloudflare_worker_helioviewer.js"
+compatibility_date = "2024-08-01"
 
 [env.production]
 workers_dev = true

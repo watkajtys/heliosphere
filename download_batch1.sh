@@ -1,0 +1,10 @@
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T05%3A13%3A09.117Z" -o frames/frame_001.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T04%3A43%3A09.117Z" -o frames/frame_002.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T04%3A13%3A09.117Z" -o frames/frame_003.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T03%3A43%3A09.117Z" -o frames/frame_004.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T03%3A13%3A09.117Z" -o frames/frame_005.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T02%3A43%3A09.117Z" -o frames/frame_006.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T02%3A13%3A09.117Z" -o frames/frame_007.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T01%3A43%3A09.117Z" -o frames/frame_008.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T01%3A13%3A09.117Z" -o frames/frame_009.png
+curl -s "http://localhost:3002/composite-image?style=ad-astra&cropWidth=1440&cropHeight=1200&date=2025-08-10T00%3A43%3A09.117Z" -o frames/frame_010.png
