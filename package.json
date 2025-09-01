@@ -1,7 +1,7 @@
 {
-	"name": "heliosphere",
+	"name": "heliolens",
 	"version": "2.0.0",
-	"description": "Solar timelapse video generator from NASA satellite data",
+	"description": "Solar timelapse video generator from NASA satellite data - Built by Vibes",
 	"private": true,
 	"type": "module",
 	"scripts": {

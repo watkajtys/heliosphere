@@ -1,7 +1,7 @@
-# Heliosphere Project - Quick Reference for Claude
+# Heliolens Project - Quick Reference for Claude
 
 ## Project Overview
-Heliosphere generates daily solar timelapse videos from NASA satellite data (SOHO/LASCO C2 + SDO/AIA 171) with optimized parallel processing and automatic upload to Cloudflare Stream.
+Heliolens generates daily solar timelapse videos from NASA satellite data (SOHO/LASCO C2 + SDO/AIA 171) with optimized parallel processing and automatic upload to Cloudflare Stream.
 
 ## VPS Access
 ```bash
@@ -20,28 +20,28 @@ ssh vps  # or ssh root@65.109.0.112
 
 ### Run 2-Day Test (Unified Script)
 ```bash
-ssh vps "cd /opt/heliosphere && node vps_unified_test.js --run"
+ssh vps "cd /opt/heliolens && node vps_unified_test.js --run"
 ```
 
 ### Run Full Production (56 days) - NEW UNIFIED SCRIPT
 ```bash
-ssh vps "cd /opt/heliosphere && pm2 start vps_production_unified.js --name heliosphere-unified -- --run"
+ssh vps "cd /opt/heliolens && pm2 start vps_production_unified.js --name heliolens-unified -- --run"
 ```
 
 ### Check Status
 ```bash
 ssh vps "pm2 status"
-ssh vps "pm2 logs heliosphere-daily --lines 50"
+ssh vps "pm2 logs heliolens-daily --lines 50"
 ```
 
 ### Access Videos
 ```bash
 # List generated videos
-ssh vps "ls -lah /opt/heliosphere/test_videos/*.mp4"
-ssh vps "ls -lah /opt/heliosphere/videos/*.mp4"
+ssh vps "ls -lah /opt/heliolens/test_videos/*.mp4"
+ssh vps "ls -lah /opt/heliolens/videos/*.mp4"
 
 # Start video server (if not running)
-ssh vps "cd /opt/heliosphere && python3 -m http.server 8080 --directory test_videos &"
+ssh vps "cd /opt/heliolens && python3 -m http.server 8080 --directory test_videos &"
 ```
 
 ## Critical API Details
@@ -71,13 +71,13 @@ const apiUrl = `https://api.helioviewer.org/v2/takeScreenshot/?` +
 - **Full run (optimized)**: ~3.5 hours for 5,376 frames
 
 ## File Locations
-- **UNIFIED script (RECOMMENDED)**: `/opt/heliosphere/vps_production_unified.js`
-- **Original production**: `/opt/heliosphere/vps_daily_production.js`
-- **Optimized script**: `/opt/heliosphere/vps_production_optimized.js`
-- **Test scripts**: `/opt/heliosphere/vps_2day_test.js`, `/opt/heliosphere/vps_unified_test.js`
-- **Frames**: `/opt/heliosphere/frames/`
-- **Videos**: `/opt/heliosphere/videos/` and `/opt/heliosphere/test_videos/`
-- **State**: `/opt/heliosphere/daily_state.json`
+- **UNIFIED script (RECOMMENDED)**: `/opt/heliolens/vps_production_unified.js`
+- **Original production**: `/opt/heliolens/vps_daily_production.js`
+- **Optimized script**: `/opt/heliolens/vps_production_optimized.js`
+- **Test scripts**: `/opt/heliolens/vps_2day_test.js`, `/opt/heliolens/vps_unified_test.js`
+- **Frames**: `/opt/heliolens/frames/`
+- **Videos**: `/opt/heliolens/videos/` and `/opt/heliolens/test_videos/`
+- **State**: `/opt/heliolens/daily_state.json`
 
 ## Testing Commands
 ```bash
@@ -130,6 +130,6 @@ node cloudflare_tus_upload.js /path/to/video.mp4 full  # For large files
 
 ## Troubleshooting
 - If SSH asks for password, run: `chmod 600 ~/.ssh/id_ed25519_hetzner`
-- Monitor logs: `ssh vps "pm2 logs heliosphere-daily"`
+- Monitor logs: `ssh vps "pm2 logs heliolens-daily"`
 - Check disk space: `ssh vps "df -h"`
 - System resources: `ssh vps "htop"`

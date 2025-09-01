@@ -5,30 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- SEO Meta Tags -->
-    <title>Heliosphere - Daily Solar Timelapse | Real NASA Satellite Imagery</title>
-    <meta name="description" content="Experience the Sun like never before with Heliosphere's daily timelapse videos. Real NASA satellite data from SOHO and SDO, showing 56 days of solar activity in stunning detail.">
-    <meta name="keywords" content="solar timelapse, sun video, NASA satellite, SOHO, SDO, solar corona, space weather, heliosphere, solar activity, CME, solar flares">
+    <title>Heliolens - Daily Solar Timelapse | Real NASA Satellite Imagery</title>
+    <meta name="description" content="Experience the Sun like never before with Heliolens's daily timelapse videos. Real NASA satellite data from SOHO and SDO, showing 56 days of solar activity in stunning detail.">
+    <meta name="keywords" content="solar timelapse, sun video, NASA satellite, SOHO, SDO, solar corona, space weather, heliolens, solar activity, CME, solar flares">
     <meta name="author" content="Matt Watkajtys - BuiltByVibes">
     <meta name="robots" content="index, follow">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://heliosphere.app/">
-    <meta property="og:title" content="Heliosphere - Daily Solar Timelapse">
+    <meta property="og:url" content="https://heliolens.builtbyvibes.com/">
+    <meta property="og:title" content="Heliolens - Daily Solar Timelapse">
     <meta property="og:description" content="Watch 56 days of the Sun's activity in stunning detail. Real NASA satellite imagery updated daily.">
     <meta property="og:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/95ecc96fa10047fa8a127aee889b8a85/thumbnails/thumbnail.jpg">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://heliosphere.app/">
-    <meta property="twitter:title" content="Heliosphere - Daily Solar Timelapse">
+    <meta property="twitter:url" content="https://heliolens.builtbyvibes.com/">
+    <meta property="twitter:title" content="Heliolens - Daily Solar Timelapse">
     <meta property="twitter:description" content="Watch 56 days of the Sun's activity in stunning detail. Real NASA satellite imagery updated daily.">
     <meta property="twitter:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/95ecc96fa10047fa8a127aee889b8a85/thumbnails/thumbnail.jpg">
     <meta property="twitter:creator" content="@builtbyvibes">
     <meta property="twitter:site" content="@builtbyvibes">
     
     <!-- Canonical URL -->
-    <link rel="canonical" href="https://heliosphere.app/">
+    <link rel="canonical" href="https://heliolens.builtbyvibes.com/">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>☀️</text></svg>">
@@ -126,6 +126,16 @@
             iframe.allowFullscreen = true;
             iframe.setAttribute('loading', 'eager');
             
+            // Add error handling
+            iframe.onerror = function(e) {
+                console.error('Video loading error:', e);
+                // Retry loading after a short delay
+                setTimeout(() => {
+                    console.log('Retrying video load...');
+                    loadVideo();
+                }, 3000);
+            };
+            
             // Clear container and add iframe
             container.innerHTML = '';
             container.appendChild(iframe);
@@ -165,26 +175,42 @@
     </script>
     
     <script>
-    // Console signature with Ad Astra color palette
+    // Console signature - Built by Vibes
     console.log(`
 %c
-██████╗ ██╗   ██╗██╗██╗  ████████╗    ██████╗ ██╗   ██╗    ██╗   ██╗██╗██████╗ ███████╗███████╗
-██╔══██╗██║   ██║██║██║  ╚══██╔══╝    ██╔══██╗╚██╗ ██╔╝    ██║   ██║██║██╔══██╗██╔════╝██╔════╝
-██████╔╝██║   ██║██║██║     ██║       ██████╔╝ ╚████╔╝     ██║   ██║██║██████╔╝█████╗  ███████╗
-██╔══██╗██║   ██║██║██║     ██║       ██╔══██╗  ╚██╔╝      ╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚════██║
-██████╔╝╚██████╔╝██║███████╗██║       ██████╔╝   ██║        ╚████╔╝ ██║██████╔╝███████╗███████║
-╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═╝       ╚═════╝    ╚═╝         ╚═══╝  ╚═╝╚═════╝ ╚══════╝╚══════╝
+██████╗ ██╗   ██╗██╗██╗    ████████╗    ██████╗ ██╗   ██╗    ██╗   ██╗██╗██████╗ ███████╗███████╗
+██╔══██╗██║   ██║██║██║    ╚══██╔══╝    ██╔══██╗╚██╗ ██╔╝    ██║   ██║██║██╔══██╗██╔════╝██╔════╝
+██████╔╝██║   ██║██║██║       ██║       ██████╔╝ ╚████╔╝     ██║   ██║██║██████╔╝█████╗  ███████╗
+██╔══██╗██║   ██║██║██║       ██║       ██╔══██╗  ╚██╔╝      ╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚════██║
+██████╔╝╚██████╔╝██║███████╗  ██║       ██████╔╝   ██║        ╚████╔╝ ██║██████╔╝███████╗███████║
+╚═════╝  ╚═════╝ ╚═╝╚══════╝  ╚═╝       ╚═════╝    ╚═╝         ╚═══╝  ╚═╝╚═════╝ ╚══════╝╚══════╝
 
-%c☀️ HELIOSPHERE %c· Daily Solar Timelapse from NASA Satellites
-%c✨ Experience the Sun like never before with real NASA satellite data from SOHO and SDO, showing 56 days of solar activity in stunning detail
-%c👨‍🚀 Built by Matt Watkajtys
-%c📧 hello@vibes.dev · 𝕏 twitter.com/builtbyvibes · github.com/builtbyvibes
+%c☀️ HELIOLENS %c
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Daily Solar Timelapse from NASA Satellites · Real-time view of our Sun's Corona
+
+%c🏗️ ARCHITECTURE
+Built with AI + Vibes: This project was developed through human-AI collaboration
+• Parallel processing pipeline for NASA satellite data (SOHO/LASCO + SDO/AIA)
+• Real-time frame generation with 48-hour data delay compensation
+• Optimized video encoding with Cloudflare Stream distribution
+• Automated daily updates via cron scheduling
+
+%c🚀 TECHNOLOGY
+• Node.js parallel processing (~27.5 frames/minute)
+• Sharp for high-quality image compositing
+• FFmpeg for cinema-grade H.264 encoding
+• Cloudflare Stream for global CDN delivery
+
+%c✨ Built with love, AI, and vibes
+www.builtbyvibes.com · @builtbyvibes
 `, 
-    'color: #4A6B8A; text-shadow: 0 0 8px rgba(74, 107, 138, 0.3); font-weight: bold; font-family: monospace; line-height: 1.2;',
-    'color: #D4640A; text-shadow: 0 0 15px rgba(212, 100, 10, 0.5); font-size: 16px; font-weight: bold;',
-    'color: #5A7A95; font-size: 14px;',
-    'color: #FFA500; font-size: 13px; font-weight: bold;',
-    'color: #CC7A33; font-size: 12px;'
+    'color: #FF6B6B; text-shadow: 0 0 20px rgba(255, 107, 107, 0.5); font-weight: bold; font-family: monospace; line-height: 1.2;',
+    'color: #FFD93D; text-shadow: 0 0 25px rgba(255, 217, 61, 0.8); font-size: 20px; font-weight: bold; letter-spacing: 3px;',
+    'color: #6BCF7F; font-size: 14px; line-height: 1.6;',
+    'color: #4ECDC4; font-size: 13px; line-height: 1.6;',
+    'color: #95E1D3; font-size: 13px; line-height: 1.6;',
+    'color: #F38181; font-size: 14px; font-weight: bold; margin-top: 10px;'
     );
     </script>
 </body>
