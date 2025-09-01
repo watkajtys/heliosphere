@@ -45,7 +45,8 @@
       "Bash($env:CLOUDFLARE_API_TOKEN=$null)",
       "Bash(npx wrangler:*)",
       "WebFetch(domain:heliosphere.pages.dev)",
-      "WebFetch(domain:5857ec7a.heliosphere.pages.dev)"
+      "WebFetch(domain:5857ec7a.heliosphere.pages.dev)",
+      "Bash(test:*)"
     ],
     "deny": []
   }

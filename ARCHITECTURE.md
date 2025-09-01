@@ -1,8 +1,10 @@
-# Heliosphere Architecture Documentation
+# Heliolens Architecture Documentation
 
 ## Overview
 
-Heliosphere is a distributed solar visualization system that processes NASA satellite imagery into daily time-lapse videos. The architecture emphasizes parallel processing, fault tolerance, and global content delivery.
+Heliolens is a distributed solar visualization system that processes NASA satellite imagery into daily time-lapse videos. Built with AI + Vibes, the architecture emphasizes parallel processing, fault tolerance, and global content delivery.
+
+**Built by Vibes** | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
 
 ## System Architecture
 

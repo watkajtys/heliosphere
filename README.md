@@ -1,8 +1,10 @@
-# 🌞 Heliosphere
+# 🌞 Heliolens
 
 **Living Portrait of Our Sun's Corona - Real-Time Solar Observatory**
 
-Heliosphere is an immersive solar visualization platform that transforms 56 days of solar activity into a mesmerizing 56-second experience. Witness coronal mass ejections, solar flares, and the ever-changing architecture of our star's million-degree atmosphere, updated daily from NASA spacecraft.
+**Built with AI + Vibes** 🤖✨ | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
+
+Heliolens is an immersive solar visualization platform that transforms 56 days of solar activity into a mesmerizing 56-second experience. Witness coronal mass ejections, solar flares, and the ever-changing architecture of our star's million-degree atmosphere, updated daily from NASA spacecraft.
 
 ## ✨ Key Features
 
@@ -28,8 +30,8 @@ Heliosphere is an immersive solar visualization platform that transforms 56 days
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/heliosphere.git
-cd heliosphere
+git clone https://github.com/yourusername/heliolens.git
+cd heliolens
 
 # Install dependencies
 npm install
@@ -52,12 +54,12 @@ node vps_optimized_test.js
 ssh root@your-vps-ip
 
 # Deploy with PM2
-pm2 start vps_production_optimized.js --name heliosphere
+pm2 start vps_production_optimized.js --name heliolens
 pm2 save
 pm2 startup
 
 # Set up daily cron
-echo "0 0 * * * cd /opt/heliosphere && node vps_production_optimized.js" | crontab -
+echo "0 0 * * * cd /opt/heliolens && node vps_production_optimized.js" | crontab -
 ```
 
 ## 📊 Performance
@@ -186,7 +188,7 @@ const upload = await fetch('https://api.cloudflare.com/client/v4/accounts/{id}/s
 ## 📁 Project Structure
 
 ```
-heliosphere/
+heliolens/
 ├── .env.example                      # Environment variables template
 ├── .gitignore                        # Git exclusions
 ├── package.json                      # Dependencies and scripts
@@ -244,6 +246,9 @@ heliosphere/
 CLOUDFLARE_STREAM_TOKEN=your_stream_api_token
 CLOUDFLARE_PAGES_TOKEN=your_pages_deployment_token
 CLOUDFLARE_ACCOUNT_ID=your_account_id
+
+# Project URL
+PROJECT_URL=https://heliolens.builtbyvibes.com
 
 # Production Settings
 PRODUCTION_DAYS=56              # Days of solar activity
@@ -409,7 +414,9 @@ MIT License - See [LICENSE](LICENSE) file for details
 ---
 
 <div align="center">
-  <strong>Built with ☀️ for humanity's understanding of our star</strong>
+  <strong>Built with ☀️ + AI + Vibes for humanity's understanding of our star</strong>
+  <br>
+  <a href="https://www.builtbyvibes.com">www.builtbyvibes.com</a> | <a href="https://twitter.com/builtbyvibes">@builtbyvibes</a>
   <br>
   <sub>Questions? Open an issue or reach out!</sub>
 </div>

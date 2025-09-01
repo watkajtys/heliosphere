@@ -1,4 +1,6 @@
-# Heliosphere Deployment Guide
+# Heliolens Deployment Guide
+
+**Built with AI + Vibes** | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -32,8 +34,8 @@
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/heliosphere.git
-cd heliosphere
+git clone https://github.com/yourusername/heliolens.git
+cd heliolens
 ```
 
 ### 2. Install Dependencies

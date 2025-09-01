@@ -1,7 +1,9 @@
-# Heliosphere Complete Pipeline Documentation
+# Heliolens Complete Pipeline Documentation
+
+**Built with AI + Vibes** | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
 
 ## Overview
-Heliosphere generates daily solar timelapse videos from NASA satellite data (SOHO/LASCO C2 + SDO/AIA 171) with optimized parallel processing and automatic upload to Cloudflare Stream. The system runs automatically every day at 3 AM UTC.
+Heliolens generates daily solar timelapse videos from NASA satellite data (SOHO/LASCO C2 + SDO/AIA 171) with optimized parallel processing and automatic upload to Cloudflare Stream. The system runs automatically every day at 3 AM UTC.
 
 ## Architecture
 

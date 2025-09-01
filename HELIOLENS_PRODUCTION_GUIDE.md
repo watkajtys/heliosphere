@@ -1,11 +1,13 @@
-# Heliosphere Daily Production System
+# Heliolens Daily Production System
 ## Complete Setup and Operations Guide
 
 ---
 
 ## 🌞 Overview
 
-Heliosphere generates daily solar timelapse videos from NASA satellite data:
+Heliolens generates daily solar timelapse videos from NASA satellite data:
+
+**Built with AI + Vibes** | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
 - **Full Video**: 56 days, 5,376 frames, ~3:44 @ 24fps
 - **Social Video**: 30 days, 2,880 frames, ~2:00 @ 24fps
 - **Data Sources**: SOHO/LASCO C2 (corona) + SDO/AIA 171 (sun disk)

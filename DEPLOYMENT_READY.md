@@ -1,4 +1,6 @@
-# Heliosphere - Deployment Ready Summary
+# Heliolens - Deployment Ready Summary
+
+**Built with AI + Vibes** | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
 
 ## 🚀 PROJECT STATUS: READY FOR DEPLOYMENT
 
@@ -17,7 +19,7 @@ A complete cloud-native system for generating a 56-day solar timelapse video wit
 7. **`test_local.js`** - Local testing script
 
 ### Google Cloud Setup Complete
-- **Project**: `heliosphere-solar`
+- **Project**: `heliolens-solar`
 - **Billing**: Linked to MyLifeAndAI account
 - **Buckets Created**:
   - `gs://heliosphere-frames/`

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Post Heliosphere video to Twitter/X using Post Bridge API
+ * Post Heliolens video to Twitter/X using Post Bridge API
+ * Built with AI + Vibes | www.builtbyvibes.com | @builtbyvibes
  */
 
 import fs from 'fs/promises';
@@ -127,9 +128,20 @@ async function createPost(caption, mediaId) {
 }
 
 async function postToTwitter() {
-    const videoPath = process.argv[2] || 'heliosphere_twitter_60s_square.mp4';
+    const videoPath = process.argv[2] || 'heliolens_social_latest.mp4';
     
-    const caption = ' ';
+    // Generate dynamic caption with current date
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    const caption = `☀️ HELIOLENS ${dateStr} - 30 days of solar activity from NASA satellites
+
+Watch our Sun's corona dance with solar flares and CMEs 🌟
+
+Built with AI + Vibes
+www.builtbyvibes.com | @builtbyvibes
+
+#Heliolens #SolarActivity #SpaceWeather #NASA #BuiltByVibes`;
     
     console.log('🚀 Posting to Twitter/X via Post Bridge');
     console.log(`📹 Video: ${videoPath}`);

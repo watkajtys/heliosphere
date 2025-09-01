@@ -1,4 +1,6 @@
-# Agents Collaboration Guide - Heliosphere Solar Composite Video
+# Agents Collaboration Guide - Heliolens Solar Composite Video
+
+**Built with AI + Vibes** | [www.builtbyvibes.com](https://www.builtbyvibes.com) | [@builtbyvibes](https://twitter.com/builtbyvibes)
 
 ## Project Status: Ready for Video Generation
 
