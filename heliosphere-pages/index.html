@@ -19,10 +19,10 @@
     <meta property="og:url" content="https://heliosphere.pages.dev/">
     <meta property="og:title" content="Heliosphere - Live Solar Corona Timelapse">
     <meta property="og:description" content="Experience 56 days of the Sun's corona in real-time. Watch solar activity and space weather in stunning detail.">
-    <meta property="og:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/thumbnails/thumbnail.jpg?time=30s">
+    <meta property="og:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/thumbnails/thumbnail.jpg?time=30s">
     <meta property="og:image:width" content="1920">
     <meta property="og:image:height" content="1200">
-    <meta property="og:video" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/iframe">
+    <meta property="og:video" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/iframe">
     <meta property="og:video:width" content="1920">
     <meta property="og:video:height" content="1200">
     
@@ -31,8 +31,8 @@
     <meta property="twitter:url" content="https://heliosphere.pages.dev/">
     <meta property="twitter:title" content="Heliosphere - Live Solar Corona Timelapse">
     <meta property="twitter:description" content="Watch 56 days of solar activity in 3:44. Real NASA satellite imagery updated daily showing solar flares and coronal mass ejections.">
-    <meta property="twitter:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/thumbnails/thumbnail.jpg?time=30s">
-    <meta property="twitter:player" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/iframe">
+    <meta property="twitter:image" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/thumbnails/thumbnail.jpg?time=30s">
+    <meta property="twitter:player" content="https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/iframe">
     <meta property="twitter:player:width" content="1920">
     <meta property="twitter:player:height" content="1200">
     
@@ -59,11 +59,11 @@
       "@type": "VideoObject",
       "name": "Heliosphere - 56 Days Solar Corona Timelapse",
       "description": "Real-time solar corona timelapse showing 56 days of Sun activity from NASA satellite imagery",
-      "thumbnailUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/thumbnails/thumbnail.jpg",
-      "uploadDate": "2025-08-16",
+      "thumbnailUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/thumbnails/thumbnail.jpg",
+      "uploadDate": "2025-09-01",
       "duration": "PT3M44S",
-      "embedUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/iframe",
-      "contentUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/manifest/video.m3u8",
+      "embedUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/iframe",
+      "contentUrl": "https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/manifest/video.m3u8",
       "width": 1920,
       "height": 1200,
       "publisher": {
@@ -104,41 +104,28 @@
             height: 100%;
         }
         
-        stream {
-            position: absolute;
-            top: 0;
-            left: 0;
+        iframe {
             width: 100%;
             height: 100%;
             border: none;
-            object-fit: cover;
         }
     </style>
 </head>
 <body>
     <div class="video-container" id="videoContainer">
-        <stream 
-            src="49144819c9f4c5ba1b41d3f74bb24077"
-            autoplay
-            loop
-            muted
-            playsinline
-            preload="auto"
-            poster="https://customer-931z4aajcqul6afi.cloudflarestream.com/49144819c9f4c5ba1b41d3f74bb24077/thumbnails/thumbnail.jpg">
-        </stream>
+        <iframe 
+            id="stream-player"
+            src="https://customer-931z4aajcqul6afi.cloudflarestream.com/996437e232eabe17c40240b4e37276a8/iframe?autoplay=true&muted=true&loop=true&controls=false&preload=auto"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+            allowfullscreen>
+        </iframe>
     </div>
-    
-    <script 
-        data-cfasync="false" 
-        defer 
-        type="text/javascript" 
-        src="https://embed.cloudflarestream.com/embed/r4xu.fla9.latest.js">
-    </script>
     
     <script>
         const VIDEO_IDS = {
-            desktop: '49144819c9f4c5ba1b41d3f74bb24077',
-            mobile: 'b8ba9dfdbb3bf25f75f03e6f46c2d59d'
+            desktop: '996437e232eabe17c40240b4e37276a8', // Full video (updated Sep 1)
+            mobile: '8aed97c0533e726d983264fff3dee861', // Portrait video (updated Sep 1)
+            social: 'da252b796d765e906e1c8da7095f1eb1' // Social square video (updated Sep 1)
         };
         
         function detectDevice() {
@@ -155,15 +142,19 @@
         function loadVideo() {
             const device = detectDevice();
             const videoId = VIDEO_IDS[device];
-            const stream = document.querySelector('stream');
+            const iframe = document.getElementById('stream-player');
             
-            if (stream && videoId) {
-                stream.src = videoId;
+            if (iframe && videoId) {
+                iframe.src = `https://customer-931z4aajcqul6afi.cloudflarestream.com/${videoId}/iframe?autoplay=true&muted=true&loop=true&controls=false&preload=auto`;
             }
         }
         
         // Load appropriate video on page load
-        document.addEventListener('DOMContentLoaded', loadVideo);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVideo();
+            
+            // Simple iframe setup
+        });
         
         // Switch video on orientation change
         window.addEventListener('resize', loadVideo);
