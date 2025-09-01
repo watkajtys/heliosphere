@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heliosphere - Sun Disk Color Grading Tuner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2a 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ffb347, #ffcc33);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 179, 71, 0.5);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .preview-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 179, 71, 0.2);
+        }
+        
+        .preview-canvas {
+            width: 100%;
+            height: 400px;
+            background: #000;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #originalCanvas, #processedCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .controls-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 179, 71, 0.2);
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .preset-btn {
+            padding: 12px 15px;
+            background: linear-gradient(135deg, rgba(255, 179, 71, 0.1), rgba(255, 204, 51, 0.1));
+            border: 1px solid rgba(255, 179, 71, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .preset-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 179, 71, 0.2), rgba(255, 204, 51, 0.2));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 179, 71, 0.3);
+        }
+        
+        .preset-btn.active {
+            background: linear-gradient(135deg, rgba(255, 179, 71, 0.3), rgba(255, 204, 51, 0.3));
+            border-color: #ffb347;
+            box-shadow: 0 0 20px rgba(255, 179, 71, 0.5);
+        }
+        
+        .preset-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 3px;
+        }
+        
+        .preset-desc {
+            font-size: 0.8em;
+            color: #aaa;
+        }
+        
+        .sliders {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .slider-group {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .slider-name {
+            font-weight: 500;
+            color: #ffb347;
+        }
+        
+        .slider-value {
+            font-family: monospace;
+            background: rgba(255, 179, 71, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255, 179, 71, 0.2), rgba(255, 204, 51, 0.2));
+            outline: none;
+            border-radius: 3px;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, #ffcc33, #ffb347);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255, 179, 71, 0.5);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, #ffcc33, #ffb347);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255, 179, 71, 0.5);
+        }
+        
+        .code-output {
+            background: #000;
+            border: 1px solid rgba(255, 179, 71, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #ffb347;
+            position: relative;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: rgba(255, 179, 71, 0.2);
+            border: 1px solid rgba(255, 179, 71, 0.5);
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: rgba(255, 179, 71, 0.3);
+        }
+        
+        .warning {
+            background: rgba(255, 50, 50, 0.1);
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .warning.show {
+            display: block;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #ffb347;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .comparison-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .toggle-btn {
+            padding: 8px 20px;
+            background: rgba(255, 179, 71, 0.2);
+            border: 1px solid rgba(255, 179, 71, 0.5);
+            border-radius: 20px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .toggle-btn.active {
+            background: rgba(255, 179, 71, 0.4);
+            box-shadow: 0 0 15px rgba(255, 179, 71, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>☀️ Heliosphere Sun Disk Grading</h1>
+        <p class="subtitle">Find the perfect "Sunshine" movie-inspired color grade while preserving solar plasma detail</p>
+        
+        <div class="comparison-toggle">
+            <button class="toggle-btn active" onclick="setComparisonMode('side-by-side')">Side by Side</button>
+            <button class="toggle-btn" onclick="setComparisonMode('overlay')">Overlay</button>
+            <button class="toggle-btn" onclick="setComparisonMode('difference')">Difference</button>
+        </div>
+        
+        <div class="main-grid">
+            <div class="preview-section">
+                <div class="section-title">Original</div>
+                <div class="preview-canvas">
+                    <img id="originalCanvas" src="sample_frame.jpg" alt="Original Frame">
+                </div>
+            </div>
+            
+            <div class="preview-section">
+                <div class="section-title">Processed</div>
+                <div class="preview-canvas">
+                    <canvas id="processedCanvas"></canvas>
+                </div>
+                <div class="warning" id="clippingWarning">
+                    ⚠️ Warning: Potential highlight clipping detected
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <div class="section-title">Presets</div>
+            <div class="preset-buttons">
+                <div class="preset-btn" onclick="loadPreset('current')">
+                    <div class="preset-title">Current Production</div>
+                    <div class="preset-desc">Bright but clips highlights</div>
+                </div>
+                <div class="preset-btn active" onclick="loadPreset('preserved')">
+                    <div class="preset-title">Sunshine Preserved</div>
+                    <div class="preset-desc">Balanced detail & glow</div>
+                </div>
+                <div class="preset-btn" onclick="loadPreset('deepGold')">
+                    <div class="preset-title">Deep Gold</div>
+                    <div class="preset-desc">Rich, warm, saturated</div>
+                </div>
+                <div class="preset-btn" onclick="loadPreset('ethereal')">
+                    <div class="preset-title">Ethereal</div>
+                    <div class="preset-desc">Soft, dreamy glow</div>
+                </div>
+                <div class="preset-btn" onclick="loadPreset('intense')">
+                    <div class="preset-title">Intense</div>
+                    <div class="preset-desc">High contrast, dramatic</div>
+                </div>
+                <div class="preset-btn" onclick="loadPreset('subtle')">
+                    <div class="preset-title">Subtle</div>
+                    <div class="preset-desc">Minimal processing</div>
+                </div>
+            </div>
+            
+            <div class="section-title">Manual Adjustment</div>
+            <div class="sliders">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Brightness</span>
+                        <span class="slider-value" id="brightnessValue">1.05</span>
+                    </div>
+                    <input type="range" id="brightness" min="0.5" max="2" step="0.05" value="1.05">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Saturation</span>
+                        <span class="slider-value" id="saturationValue">1.3</span>
+                    </div>
+                    <input type="range" id="saturation" min="0.5" max="2" step="0.05" value="1.3">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Hue Shift</span>
+                        <span class="slider-value" id="hueValue">15</span>
+                    </div>
+                    <input type="range" id="hue" min="-30" max="30" step="1" value="15">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Linear Multiplier</span>
+                        <span class="slider-value" id="linearMultValue">1.2</span>
+                    </div>
+                    <input type="range" id="linearMult" min="0.8" max="2" step="0.05" value="1.2">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Linear Offset</span>
+                        <span class="slider-value" id="linearOffsetValue">-10</span>
+                    </div>
+                    <input type="range" id="linearOffset" min="-50" max="10" step="1" value="-10">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Gamma</span>
+                        <span class="slider-value" id="gammaValue">1.0</span>
+                    </div>
+                    <input type="range" id="gamma" min="0.5" max="2" step="0.05" value="1.0">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Tint R</span>
+                        <span class="slider-value" id="tintRValue">255</span>
+                    </div>
+                    <input type="range" id="tintR" min="200" max="255" step="1" value="255">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Tint G</span>
+                        <span class="slider-value" id="tintGValue">200</span>
+                    </div>
+                    <input type="range" id="tintG" min="150" max="255" step="1" value="200">
+                </div>
+                
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-name">Tint B</span>
+                        <span class="slider-value" id="tintBValue">120</span>
+                    </div>
+                    <input type="range" id="tintB" min="80" max="200" step="1" value="120">
+                </div>
+            </div>
+            
+            <div class="code-output">
+                <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+                <pre id="codeOutput">async function gradeSunDisk(imageBuffer) {
+    return await sharp(imageBuffer)
+        .modulate({ saturation: 1.3, brightness: 1.05, hue: 15 })
+        .tint({ r: 255, g: 200, b: 120 })
+        .linear(1.2, -10)
+        .gamma(1.0)
+        .toBuffer();
+}</pre>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const presets = {
+            current: {
+                brightness: 1.4,
+                saturation: 1.2,
+                hue: 15,
+                linearMult: 1.7,
+                linearOffset: -30,
+                gamma: 1.15,
+                tintR: 255,
+                tintG: 200,
+                tintB: 120
+            },
+            preserved: {
+                brightness: 1.05,
+                saturation: 1.3,
+                hue: 15,
+                linearMult: 1.2,
+                linearOffset: -10,
+                gamma: 1.0,
+                tintR: 255,
+                tintG: 200,
+                tintB: 120
+            },
+            deepGold: {
+                brightness: 0.95,
+                saturation: 1.4,
+                hue: 20,
+                linearMult: 1.25,
+                linearOffset: -8,
+                gamma: 0.95,
+                tintR: 255,
+                tintG: 190,
+                tintB: 100
+            },
+            ethereal: {
+                brightness: 1.1,
+                saturation: 1.1,
+                hue: 10,
+                linearMult: 1.15,
+                linearOffset: -5,
+                gamma: 1.05,
+                tintR: 255,
+                tintG: 210,
+                tintB: 140
+            },
+            intense: {
+                brightness: 0.85,
+                saturation: 1.5,
+                hue: 25,
+                linearMult: 1.4,
+                linearOffset: -12,
+                gamma: 0.9,
+                tintR: 255,
+                tintG: 180,
+                tintB: 90
+            },
+            subtle: {
+                brightness: 1.0,
+                saturation: 1.15,
+                hue: 10,
+                linearMult: 1.1,
+                linearOffset: -5,
+                gamma: 1.0,
+                tintR: 255,
+                tintG: 210,
+                tintB: 150
+            }
+        };
+        
+        let currentMode = 'side-by-side';
+        let originalImage = null;
+        
+        // Load image on page load
+        window.onload = function() {
+            const img = new Image();
+            img.onload = function() {
+                originalImage = img;
+                applyFilters();
+            };
+            img.src = 'sample_frame.jpg';
+            
+            // Set up event listeners
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                slider.addEventListener('input', function() {
+                    updateSliderValue(this);
+                    applyFilters();
+                    updateCode();
+                });
+            });
+            
+            // Load default preset
+            loadPreset('preserved');
+        };
+        
+        function updateSliderValue(slider) {
+            const valueSpan = document.getElementById(slider.id + 'Value');
+            if (valueSpan) {
+                valueSpan.textContent = slider.value;
+            }
+        }
+        
+        function loadPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+            
+            // Update sliders
+            document.getElementById('brightness').value = preset.brightness;
+            document.getElementById('saturation').value = preset.saturation;
+            document.getElementById('hue').value = preset.hue;
+            document.getElementById('linearMult').value = preset.linearMult;
+            document.getElementById('linearOffset').value = preset.linearOffset;
+            document.getElementById('gamma').value = preset.gamma;
+            document.getElementById('tintR').value = preset.tintR;
+            document.getElementById('tintG').value = preset.tintG;
+            document.getElementById('tintB').value = preset.tintB;
+            
+            // Update displays
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                updateSliderValue(slider);
+            });
+            
+            // Update active button
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.preset-btn').classList.add('active');
+            
+            applyFilters();
+            updateCode();
+        }
+        
+        function applyFilters() {
+            if (!originalImage) return;
+            
+            const canvas = document.getElementById('processedCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = originalImage.width;
+            canvas.height = originalImage.height;
+            
+            // Draw original image
+            ctx.drawImage(originalImage, 0, 0);
+            
+            // Get image data
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Get slider values
+            const brightness = parseFloat(document.getElementById('brightness').value);
+            const saturation = parseFloat(document.getElementById('saturation').value);
+            const hue = parseFloat(document.getElementById('hue').value);
+            const linearMult = parseFloat(document.getElementById('linearMult').value);
+            const linearOffset = parseFloat(document.getElementById('linearOffset').value);
+            const gamma = parseFloat(document.getElementById('gamma').value);
+            const tintR = parseFloat(document.getElementById('tintR').value) / 255;
+            const tintG = parseFloat(document.getElementById('tintG').value) / 255;
+            const tintB = parseFloat(document.getElementById('tintB').value) / 255;
+            
+            let clippedPixels = 0;
+            const totalPixels = canvas.width * canvas.height;
+            
+            // Apply filters to each pixel
+            for (let i = 0; i < data.length; i += 4) {
+                // Convert to normalized values
+                let r = data[i] / 255;
+                let g = data[i + 1] / 255;
+                let b = data[i + 2] / 255;
+                
+                // Apply hue/saturation/brightness (simplified HSL conversion)
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                const l = (max + min) / 2;
+                const delta = max - min;
+                
+                if (delta > 0) {
+                    const s = delta / (1 - Math.abs(2 * l - 1));
+                    
+                    // Apply saturation
+                    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                    r = gray + (r - gray) * saturation;
+                    g = gray + (g - gray) * saturation;
+                    b = gray + (b - gray) * saturation;
+                }
+                
+                // Apply brightness
+                r *= brightness;
+                g *= brightness;
+                b *= brightness;
+                
+                // Apply tint
+                r *= tintR;
+                g *= tintG;
+                b *= tintB;
+                
+                // Apply linear adjustment (contrast)
+                r = r * linearMult + linearOffset / 255;
+                g = g * linearMult + linearOffset / 255;
+                b = b * linearMult + linearOffset / 255;
+                
+                // Apply gamma
+                r = Math.pow(Math.max(0, r), 1 / gamma);
+                g = Math.pow(Math.max(0, g), 1 / gamma);
+                b = Math.pow(Math.max(0, b), 1 / gamma);
+                
+                // Simulate screen blend mode (with black background becoming the sun)
+                // Screen formula: 1 - (1 - A) * (1 - B)
+                // Since corona has black center, we simulate placing this on black
+                const screenBlendFactor = 0.7; // Simulate partial screen blend
+                r = 1 - (1 - r) * (1 - r * screenBlendFactor);
+                g = 1 - (1 - g) * (1 - g * screenBlendFactor);
+                b = 1 - (1 - b) * (1 - b * screenBlendFactor);
+                
+                // Check for clipping
+                if (r >= 0.98 || g >= 0.98 || b >= 0.98) {
+                    clippedPixels++;
+                }
+                
+                // Clamp and convert back to 0-255
+                data[i] = Math.min(255, Math.max(0, r * 255));
+                data[i + 1] = Math.min(255, Math.max(0, g * 255));
+                data[i + 2] = Math.min(255, Math.max(0, b * 255));
+            }
+            
+            // Put modified image data back
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Show warning if significant clipping
+            const clippingPercent = (clippedPixels / totalPixels) * 100;
+            const warning = document.getElementById('clippingWarning');
+            if (clippingPercent > 5) {
+                warning.classList.add('show');
+                warning.innerHTML = `⚠️ Warning: ${clippingPercent.toFixed(1)}% of pixels are clipping highlights`;
+            } else {
+                warning.classList.remove('show');
+            }
+        }
+        
+        function updateCode() {
+            const brightness = document.getElementById('brightness').value;
+            const saturation = document.getElementById('saturation').value;
+            const hue = document.getElementById('hue').value;
+            const linearMult = document.getElementById('linearMult').value;
+            const linearOffset = document.getElementById('linearOffset').value;
+            const gamma = document.getElementById('gamma').value;
+            const tintR = document.getElementById('tintR').value;
+            const tintG = document.getElementById('tintG').value;
+            const tintB = document.getElementById('tintB').value;
+            
+            const code = `async function gradeSunDisk(imageBuffer) {
+    return await sharp(imageBuffer)
+        .modulate({ saturation: ${saturation}, brightness: ${brightness}, hue: ${hue} })
+        .tint({ r: ${tintR}, g: ${tintG}, b: ${tintB} })
+        .linear(${linearMult}, ${linearOffset})
+        .gamma(${gamma})
+        .toBuffer();
+}`;
+            
+            document.getElementById('codeOutput').textContent = code;
+        }
+        
+        function copyCode() {
+            const code = document.getElementById('codeOutput').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+        
+        function setComparisonMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // TODO: Implement overlay and difference modes
+            if (mode === 'overlay' || mode === 'difference') {
+                alert('Coming soon: ' + mode + ' mode');
+            }
+        }
+    </script>
+</body>
+</html>

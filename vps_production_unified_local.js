@@ -39,12 +39,10 @@ const CONFIG = {
     FEATHER_RADIUS: 40,
     
     // Processing (optimized for parallel)
-    FETCH_CONCURRENCY: 6,     // Parallel image fetches (reduced for memory)
-    PROCESS_CONCURRENCY: 3,   // Parallel frame processing (reduced for memory)
-    BATCH_SIZE: 50,          // Save state every N frames (reduced for frequent cleanup)
+    FETCH_CONCURRENCY: 8,     // Parallel image fetches
+    PROCESS_CONCURRENCY: 4,   // Parallel frame processing
+    BATCH_SIZE: 100,         // Save state every N frames
     MAX_RETRIES: 3,          // Max retry attempts for failed fetches
-    MEMORY_CLEANUP_INTERVAL: 500, // Clear checksums every N frames
-    MAX_MANIFEST_SIZE: 1000,      // Max frames to keep in memory manifest
     
     // Fallback limits - max ±7min to stay safely within 15min frame boundaries
     MAX_FALLBACK_MINUTES: 7, // Stay well within 15min frame boundary
@@ -52,7 +50,7 @@ const CONFIG = {
     FALLBACK_STEPS_SDO: [0, 1, -1, 3, -3, 5, -5, 7, -7],   // Alternate +/- for better coverage
     
     // Cloudflare proxy
-    USE_CLOUDFLARE: true,
+    USE_CLOUDFLARE: false,
     CLOUDFLARE_URL: 'https://heliosphere-proxy.matty-f7e.workers.dev',
     
     // Storage paths
@@ -77,7 +75,6 @@ let productionState = {
     dateRange: { start: null, end: null },
     totalFrames: 0,
     processedFrames: 0,
-    skippedFrames: 0,  // Frames that already exist
     fetchedFrames: 0,
     interpolatedFrames: 0,
     missingFrames: [],  // Track frame numbers that couldn't be fetched
@@ -231,7 +228,7 @@ async function fetchImageWithRetry(sourceId, date, retries = CONFIG.MAX_RETRIES)
     
     const apiUrl = `https://api.helioviewer.org/v2/takeScreenshot/?` +
         `date=${date}` +
-        `&layers=[${sourceId},1,100]` +
+        `&layers=%5B${sourceId},1,100%5D` +
         `&imageScale=${imageScale}` +
         `&width=${width}` +
         `&height=${height}` +
@@ -249,6 +246,13 @@ async function fetchImageWithRetry(sourceId, date, retries = CONFIG.MAX_RETRIES)
         try {
             await execAsync(`curl -s -o "${tempFile}" "${fetchUrl}"`, { timeout: 30000 });
             const buffer = await fs.readFile(tempFile);
+            
+            // Validate it's actually a PNG image (check magic bytes)
+            if (buffer.length < 8 || !buffer.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))) {
+                // Check if it's an error message
+                const text = buffer.toString('utf8', 0, Math.min(100, buffer.length));
+                throw new Error('Invalid image format. Got: ' + text.substring(0, 50));
+            }
             await fs.unlink(tempFile).catch(() => {});
             
             // Validate frame size
@@ -332,15 +336,15 @@ async function gradeCorona(imageBuffer) {
 // Apply Ad Astra color grading to sun disk
 async function gradeSunDisk(imageBuffer) {
     return await sharp(imageBuffer)
-        .modulate({ saturation: 1.25, brightness: 1.2, hue: 15 })
+        .modulate({ saturation: 1.2, brightness: 1.4, hue: 15 })
         .tint({ r: 255, g: 200, b: 120 })
-        .linear(1.4, -20)
-        .gamma(1.05)
+        .linear(1.7, -30)
+        .gamma(1.15)
         .toBuffer();
 }
 
-// Apply radial feathering for circular blend
-async function applyRadialFeather(imageBuffer, finalSize, compositeRadius, featherRadius) {
+// Apply square feathering
+async function applySquareFeather(imageBuffer, finalSize, compositeRadius, featherRadius) {
     const resizedImage = await sharp(imageBuffer)
         .resize(finalSize, finalSize, {
             kernel: sharp.kernel.lanczos3,
@@ -351,19 +355,28 @@ async function applyRadialFeather(imageBuffer, finalSize, compositeRadius, feath
     if (featherRadius <= 0) return resizedImage;
 
     const center = finalSize / 2;
-    const innerRadius = compositeRadius - featherRadius;
-    const outerRadius = compositeRadius;
+    const squareSize = compositeRadius * 2;
+    const squareLeft = center - compositeRadius;
+    const squareTop = center - compositeRadius;
     
-    // Create radial gradient mask for circular feathering
     const svgMask = `
         <svg width="${finalSize}" height="${finalSize}">
             <defs>
-                <radialGradient id="feather">
-                    <stop offset="${(innerRadius / outerRadius) * 100}%" style="stop-color:white;stop-opacity:1" />
+                <linearGradient id="featherHorizontal" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:white;stop-opacity:0" />
+                    <stop offset="${(featherRadius / squareSize) * 100}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="${100 - (featherRadius / squareSize) * 100}%" style="stop-color:white;stop-opacity:1" />
                     <stop offset="100%" style="stop-color:white;stop-opacity:0" />
-                </radialGradient>
+                </linearGradient>
+                <linearGradient id="featherVertical" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:white;stop-opacity:0" />
+                    <stop offset="${(featherRadius / squareSize) * 100}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="${100 - (featherRadius / squareSize) * 100}%" style="stop-color:white;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:white;stop-opacity:0" />
+                </linearGradient>
             </defs>
-            <circle cx="${center}" cy="${center}" r="${outerRadius}" fill="url(#feather)" />
+            <rect x="${squareLeft}" y="0" width="${squareSize}" height="${finalSize}" fill="url(#featherHorizontal)" />
+            <rect x="0" y="${squareTop}" width="${finalSize}" height="${squareSize}" fill="url(#featherVertical)" style="mix-blend-mode: multiply" />
         </svg>
     `;
 
@@ -382,8 +395,8 @@ async function processFrame(coronaData, sunDiskData) {
         gradeSunDisk(sunDiskData.buffer)
     ]);
     
-    // Apply radial feathering to sun disk
-    const featheredSunDisk = await applyRadialFeather(
+    // Apply square feathering to sun disk
+    const featheredSunDisk = await applySquareFeather(
         gradedSunDisk, 1435, CONFIG.COMPOSITE_RADIUS, CONFIG.FEATHER_RADIUS
     );
     
@@ -534,55 +547,24 @@ async function processFramesParallel(frames) {
             productionState.processedFrames++;
             productionState.fetchedFrames++;
             
+            // Safety check to prevent infinite processing
+            if (productionState.processedFrames > productionState.totalFrames) {
+                console.error(`❌ CRITICAL: Processed more frames (${productionState.processedFrames}) than expected (${productionState.totalFrames})`);
+                throw new Error('Frame count exceeded - aborting to prevent infinite loop');
+            }
+            
             // Progress update
             if (productionState.processedFrames % 10 === 0) {
-                const totalCompleted = productionState.processedFrames + productionState.skippedFrames;
-                const progress = (totalCompleted / productionState.totalFrames * 100).toFixed(1);
+                const progress = (productionState.processedFrames / productionState.totalFrames * 100).toFixed(1);
                 const runtime = (Date.now() - productionState.startTime) / 1000;
                 const fps = (productionState.processedFrames / (runtime / 60)).toFixed(1);
-                console.log(`Progress: ${progress}% (fetched:${productionState.processedFrames}, skipped:${productionState.skippedFrames}, total:${totalCompleted}/${productionState.totalFrames}) - ${fps} frames/min`);
+                console.log(`Progress: ${progress}% (${productionState.processedFrames}/${productionState.totalFrames}) - ${fps} frames/min`);
             }
             
             // Save state periodically
             if (productionState.processedFrames % CONFIG.BATCH_SIZE === 0) {
                 await saveState();
                 await saveManifest();
-                
-                // Memory cleanup every N frames
-                if (productionState.processedFrames % CONFIG.MEMORY_CLEANUP_INTERVAL === 0) {
-                    console.log(`🧹 Performing memory cleanup at frame ${productionState.processedFrames}`);
-                    
-                    // Clear old checksums (keep only last 1000)
-                    if (productionState.checksums.corona.size > 1000) {
-                        const entries = Array.from(productionState.checksums.corona.entries());
-                        productionState.checksums.corona = new Map(entries.slice(-1000));
-                    }
-                    if (productionState.checksums.sunDisk.size > 1000) {
-                        const entries = Array.from(productionState.checksums.sunDisk.entries());
-                        productionState.checksums.sunDisk = new Map(entries.slice(-1000));
-                    }
-                    
-                    // Trim frameManifest (keep only recent frames in memory)
-                    const manifestKeys = Object.keys(productionState.frameManifest);
-                    if (manifestKeys.length > CONFIG.MAX_MANIFEST_SIZE) {
-                        const keepKeys = manifestKeys.slice(-CONFIG.MAX_MANIFEST_SIZE);
-                        const newManifest = {};
-                        for (const key of keepKeys) {
-                            newManifest[key] = productionState.frameManifest[key];
-                        }
-                        productionState.frameManifest = newManifest;
-                    }
-                    
-                    // Force garbage collection if available
-                    if (global.gc) {
-                        global.gc();
-                        console.log('🔄 Forced garbage collection');
-                    }
-                    
-                    // Log memory usage
-                    const memUsage = process.memoryUsage();
-                    console.log(`📊 Memory: RSS=${(memUsage.rss/1024/1024).toFixed(0)}MB, Heap=${(memUsage.heapUsed/1024/1024).toFixed(0)}MB/${(memUsage.heapTotal/1024/1024).toFixed(0)}MB`);
-                }
             }
             
             return true;
@@ -721,22 +703,21 @@ async function processDateRange() {
     console.log(`   From: ${startDate.toISOString().split('T')[0]}`);
     console.log(`   To:   ${endDate.toISOString().split('T')[0]}`);
     
-    // Generate all frame timestamps - START FROM MOST RECENT
+    // Generate all frame timestamps
     const frames = [];
-    const currentDate = new Date(endDate);
+    const currentDate = new Date(startDate);
     
-    // Process from newest to oldest
-    while (currentDate >= startDate) {
+    while (currentDate <= endDate) {
         frames.push(new Date(currentDate));
-        currentDate.setMinutes(currentDate.getMinutes() - CONFIG.INTERVAL_MINUTES);
+        currentDate.setMinutes(currentDate.getMinutes() + CONFIG.INTERVAL_MINUTES);
     }
     
     productionState.totalFrames = frames.length;
     console.log(`\n📊 Total frames to process: ${frames.length}`);
-    console.log(`   📅 Order: NEWEST → OLDEST (most recent data first)`);
     
     // Filter out already processed frames
     const framesToProcess = [];
+    let alreadyProcessedCount = 0;
     for (let i = 0; i < frames.length; i++) {
         const frameKey = getFrameKey(frames[i]);
         const framePath = getFramePath(frames[i]);
@@ -744,15 +725,12 @@ async function processDateRange() {
         if (!productionState.frameManifest[frameKey] || !await fileExists(framePath)) {
             framesToProcess.push({ number: i, date: frames[i] });
         } else {
-            productionState.skippedFrames++;
-            if (productionState.skippedFrames <= 10 || productionState.skippedFrames % 100 === 0) {
-                console.log(`   ⏭️  Skipping existing frame: ${frameKey}`);
-            }
+            alreadyProcessedCount++;
         }
     }
     
     console.log(`📊 Frames to fetch: ${framesToProcess.length}`);
-    console.log(`📊 Already exist (skipping): ${productionState.skippedFrames}`);
+    console.log(`📊 Already exists: ${alreadyProcessedCount}`);
     
     // Process remaining frames with parallel fetching
     if (framesToProcess.length > 0) {
@@ -765,6 +743,12 @@ async function processDateRange() {
         throw new Error('Frame validation failed - too many missing frames');
     }
     
+    // Safety check: ensure we haven't processed more than expected
+    if (productionState.processedFrames > productionState.totalFrames) {
+        console.warn(`⚠️ WARNING: Processed ${productionState.processedFrames} frames but expected only ${productionState.totalFrames}`);
+        productionState.processedFrames = productionState.totalFrames;
+    }
+    
     console.log(`\n✅ Processing complete!`);
     console.log(`   Processed: ${productionState.processedFrames}/${productionState.totalFrames}`);
     console.log(`   Fetched: ${productionState.fetchedFrames}`);
@@ -775,9 +759,10 @@ async function processDateRange() {
     return frames;
 }
 
-// Generate video from frames
-async function generateVideo(frames, days, outputName) {
-    console.log(`\n🎬 Generating ${outputName} (${days} days)...`);
+// Generate video from frames with optional crop
+async function generateVideo(frames, days, outputName, cropSettings = null) {
+    const cropDesc = cropSettings ? ` (${cropSettings.description})` : '';
+    console.log(`\n🎬 Generating ${outputName}${cropDesc} (${days} days)...`);
     
     const endDate = frames[frames.length - 1];
     const videoStartDate = new Date(endDate);
@@ -823,8 +808,15 @@ async function generateVideo(frames, days, outputName) {
     // Generate video with FFmpeg
     const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mp4`);
     
+    // Build video filter if crop is specified
+    let videoFilter = '';
+    if (cropSettings) {
+        videoFilter = `-vf "crop=${cropSettings.width}:${cropSettings.height}:${cropSettings.x}:${cropSettings.y}" `;
+    }
+    
     const ffmpegCommand = `ffmpeg -y -r ${CONFIG.FPS} -f concat -safe 0 -i "${frameListPath}" ` +
-        `-c:v libx264 -pix_fmt yuv420p -preset slow -crf 18 "${outputPath}"`;
+        `${videoFilter}` +
+        `-c:v libx264 -pix_fmt yuv420p -preset veryslow -crf ${cropSettings?.crf || 10} "${outputPath}"`;
     
     try {
         await execAsync(ffmpegCommand, { timeout: 300000 });
@@ -834,12 +826,39 @@ async function generateVideo(frames, days, outputName) {
         console.log(`  Size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
         console.log(`  Frames: ${frameList.length}`);
         console.log(`  Duration: ${(frameList.length / CONFIG.FPS).toFixed(1)} seconds`);
+        if (cropSettings) {
+            console.log(`  Dimensions: ${cropSettings.width}x${cropSettings.height}`);
+        }
         
         return outputPath;
     } catch (error) {
         console.error(`Failed to generate video: ${error.message}`);
         throw error;
     }
+}
+
+// Generate portrait video (900x1200)
+async function generatePortraitVideo(frames, days, outputName) {
+    return generateVideo(frames, days, outputName, {
+        width: 900,
+        height: 1200,
+        x: 280,  // Crop 280px from left
+        y: 0,
+        crf: 10,
+        description: '900x1200 portrait'
+    });
+}
+
+// Generate square social video (1200x1200)
+async function generateSquareSocialVideo(frames, days, outputName) {
+    return generateVideo(frames, days, outputName, {
+        width: 1200,
+        height: 1200,
+        x: 130,  // Crop 130px from left
+        y: 0,
+        crf: 15,
+        description: '1200x1200 square'
+    });
 }
 
 // Clean up old frames
@@ -925,29 +944,37 @@ async function runDailyProduction() {
         await loadState();
         await loadManifest();
         
+        // Reset runtime counters for this run (keep manifest data)
+        productionState.processedFrames = 0;
+        productionState.fetchedFrames = 0;
+        productionState.interpolatedFrames = 0;
+        productionState.fallbacksUsed = 0;
+        productionState.retryCount = 0;
+        productionState.missingFrames = [];
+        productionState.failureStats = {
+            coronaFailures: 0,
+            sunDiskFailures: 0,
+            bothFailures: 0
+        };
+        productionState.checksums = {
+            corona: new Map(),
+            sunDisk: new Map()
+        };
+        
         // Process all frames
         const frames = await processDateRange();
         
-        // Generate initial videos (basic format)
-        await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_full');
-        await generateVideo(frames, CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+        // Generate all three video formats
+        console.log('\n📹 Generating all video formats...');
         
-        // Generate all video formats (MJPEG) and upload to Cloudflare
-        console.log('\n🎬 Generating production videos and uploading to Cloudflare...');
-        try {
-            const { stdout, stderr } = await execAsync('cd /opt/heliosphere && node generate_videos_only.js', {
-                timeout: 1200000 // 20 minutes timeout
-            });
-            console.log(stdout);
-            if (stderr) console.error('Video generation warnings:', stderr);
-        } catch (error) {
-            console.error('Failed to generate/upload videos:', error.message);
-            productionState.errors.push({
-                type: 'video_upload',
-                message: error.message,
-                timestamp: new Date().toISOString()
-            });
-        }
+        // Full resolution video (1460x1200)
+        await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_full');
+        
+        // Square social media video (1200x1200) 
+        await generateSquareSocialVideo(frames, CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+        
+        // Portrait mobile video (900x1200)
+        await generatePortraitVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_portrait');
         
         // Clean up old frames
         await cleanupOldFrames();
@@ -978,19 +1005,9 @@ app.get('/status', (req, res) => {
         ? (Date.now() - productionState.startTime) / 1000
         : 0;
     
-    const memUsage = process.memoryUsage();
-    const memoryStats = {
-        rss: (memUsage.rss / 1024 / 1024).toFixed(1),
-        heapUsed: (memUsage.heapUsed / 1024 / 1024).toFixed(1),
-        heapTotal: (memUsage.heapTotal / 1024 / 1024).toFixed(1),
-        external: (memUsage.external / 1024 / 1024).toFixed(1),
-        percentUsed: ((memUsage.heapUsed / memUsage.heapTotal) * 100).toFixed(1)
-    };
-    
     res.json({
         ...productionState,
         runtime,
-        memory: memoryStats,
         checksums: {
             corona: productionState.checksums.corona.size,
             sunDisk: productionState.checksums.sunDisk.size
@@ -1006,19 +1023,9 @@ app.get('/api/status', (req, res) => {
         ? (Date.now() - productionState.startTime) / 1000
         : 0;
     
-    const memUsage = process.memoryUsage();
-    const memoryStats = {
-        rss: (memUsage.rss / 1024 / 1024).toFixed(1),
-        heapUsed: (memUsage.heapUsed / 1024 / 1024).toFixed(1),
-        heapTotal: (memUsage.heapTotal / 1024 / 1024).toFixed(1),
-        external: (memUsage.external / 1024 / 1024).toFixed(1),
-        percentUsed: ((memUsage.heapUsed / memUsage.heapTotal) * 100).toFixed(1)
-    };
-    
     res.json({
         ...productionState,
         runtime,
-        memory: memoryStats,
         checksums: {
             corona: productionState.checksums.corona.size,
             sunDisk: productionState.checksums.sunDisk.size

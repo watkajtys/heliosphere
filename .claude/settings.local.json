@@ -41,7 +41,11 @@
       "WebFetch(domain:api.post-bridge.com)",
       "Bash(git pull:*)",
       "Bash(git push:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash($env:CLOUDFLARE_API_TOKEN=$null)",
+      "Bash(npx wrangler:*)",
+      "WebFetch(domain:heliosphere.pages.dev)",
+      "WebFetch(domain:5857ec7a.heliosphere.pages.dev)"
     ],
     "deny": []
   }

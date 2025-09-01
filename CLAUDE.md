@@ -89,12 +89,12 @@ npm run typecheck
 ssh vps "cd /opt/heliosphere && ffmpeg -version"
 ```
 
-## Recent Production Results (Aug 19, 2025)
+## Recent Production Results (Aug 26, 2025)
 - ✅ Full 56-day production run completed (5376 frames)
 - ✅ Generated all three video formats:
-  - Full: 588MB, 224 seconds (original quality)
-  - Social: 18MB, 60 seconds (for social media)
-  - Portrait: 135MB, 224 seconds (9:16 aspect, CRF 10)
+  - **Full**: 1460×1200, 224 seconds, 56 days (original resolution)
+  - **Social**: 1200×1200 square, ~120 seconds, 30 days (cropped for social media)
+  - **Portrait**: 900×1200, 224 seconds, 56 days (3:4 aspect for mobile)
 - ✅ All videos uploaded to Cloudflare Stream
 - ✅ Landing page deployed with responsive video selection
 - ⚠️ Identified highlight blowout issue with screen blend mode
