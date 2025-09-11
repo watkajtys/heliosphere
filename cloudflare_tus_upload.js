@@ -10,9 +10,11 @@ import * as tus from 'tus-js-client';
 
 // Cloudflare configuration
 const CLOUDFLARE_CONFIG = {
-    ACCOUNT_ID: 'f7e27d63f4766d7fb6a0f5b4789e2cdb',
+    ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
     API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-    TUS_ENDPOINT: `https://api.cloudflare.com/client/v4/accounts/f7e27d63f4766d7fb6a0f5b4789e2cdb/stream`
+    get TUS_ENDPOINT() {
+        return `https://api.cloudflare.com/client/v4/accounts/${this.ACCOUNT_ID}/stream`;
+    }
 };
 
 /**
@@ -21,10 +23,21 @@ const CLOUDFLARE_CONFIG = {
  * @param {string} name - Name for the video
  * @returns {Promise<Object>} Video details including ID and URLs
  */
-async function uploadLargeVideo(videoPath, name) {
-    if (!CLOUDFLARE_CONFIG.API_TOKEN) {
-        throw new Error('CLOUDFLARE_API_TOKEN environment variable not set');
+// Validate environment variables
+function validateEnvironment() {
+    const required = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'];
+    const missing = required.filter(key => !process.env[key]);
+    
+    if (missing.length > 0) {
+        console.error('❌ Missing required environment variables:');
+        missing.forEach(key => console.error(`   - ${key}`));
+        console.error('\n📝 Set these in your .env file or environment');
+        process.exit(1);
     }
+}
+
+async function uploadLargeVideo(videoPath, name) {
+    validateEnvironment();
 
     console.log(`📤 Uploading ${name} to Cloudflare Stream (TUS resumable)...`);
     
@@ -41,7 +54,9 @@ async function uploadLargeVideo(videoPath, name) {
             chunkSize: 50 * 1024 * 1024, // 50MB chunks (recommended for reliable connections)
             metadata: {
                 name: name,
-                filetype: 'video/mp4'
+                filetype: 'video/mp4',
+                description: 'Solar timelapse created from NASA/ESA SOHO LASCO C2 and NASA SDO AIA 171 satellite imagery. Data courtesy of NASA and ESA.',
+                creator: 'Heliolens by Built by Vibes'
             },
             headers: {
                 'Authorization': `Bearer ${CLOUDFLARE_CONFIG.API_TOKEN}`
@@ -97,8 +112,10 @@ async function replaceVideoTUS(videoPath, type) {
         // File doesn't exist yet
     }
     
-    // Save new video ID
-    currentVideos[type] = result.id;
+    // Save new video ID with correct key format for deploy_to_pages.js
+    // Remove 'heliosphere_' prefix if present
+    const cleanType = type.replace(/^heliosphere_/, '');
+    currentVideos[cleanType] = result.id;
     fs.writeFileSync(
         '/opt/heliosphere/cloudflare_videos.json',
         JSON.stringify(currentVideos, null, 2)

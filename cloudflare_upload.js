@@ -11,9 +11,9 @@ import FormData from 'form-data';
 
 // Cloudflare configuration
 const CLOUDFLARE_CONFIG = {
-    ACCOUNT_ID: 'f7e27d63f4766d7fb6a0f5b4789e2cdb',
-    API_TOKEN: process.env.CLOUDFLARE_API_TOKEN, // Set this in environment
-    SUBDOMAIN: 'customer-931z4aajcqul6afi.cloudflarestream.com',
+    ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+    API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+    SUBDOMAIN: process.env.CLOUDFLARE_STREAM_SUBDOMAIN,
     
     // Store current video IDs (will be saved to file)
     CURRENT_VIDEOS: {
@@ -28,10 +28,21 @@ const CLOUDFLARE_CONFIG = {
  * @param {string} name - Name for the video
  * @returns {Object} Video details including ID and URLs
  */
-async function uploadToCloudflare(videoPath, name) {
-    if (!CLOUDFLARE_CONFIG.API_TOKEN) {
-        throw new Error('CLOUDFLARE_API_TOKEN environment variable not set');
+// Validate environment variables at startup
+function validateEnvironment() {
+    const required = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_STREAM_SUBDOMAIN'];
+    const missing = required.filter(key => !process.env[key]);
+    
+    if (missing.length > 0) {
+        console.error('❌ Missing required environment variables:');
+        missing.forEach(key => console.error(`   - ${key}`));
+        console.error('\n📝 Set these in your .env file or environment');
+        process.exit(1);
     }
+}
+
+async function uploadToCloudflare(videoPath, name) {
+    validateEnvironment();
     
     console.log(`📤 Uploading ${name} to Cloudflare Stream...`);
     

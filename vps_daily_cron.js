@@ -44,11 +44,11 @@ const CONFIG = {
     
     // Fallback limits
     MAX_FALLBACK_MINUTES: 14, // Stay within frame boundary
-    FALLBACK_STEPS_SOHO: [0, -1, -3, -5, -7, 1, 3, 5, 7],
-    FALLBACK_STEPS_SDO: [0, 1, -1, 3, -3, 5, -5, 7, -7],
+    FALLBACK_STEPS_SOHO: [0, -1, -3, -5, -7, -10, -12, -14, 1, 3, 5, 7, 10, 12, 14],
+    FALLBACK_STEPS_SDO: [0, 1, -1, 3, -3, 5, -5, 7, -7, 10, -10, 12, -12, 14, -14],
     
     // Cloudflare proxy
-    USE_CLOUDFLARE: true,
+    USE_CLOUDFLARE: false,  // Disabled - proxy not handling params correctly
     CLOUDFLARE_URL: 'https://heliosphere-proxy.matty-f7e.workers.dev',
     
     // Storage paths
@@ -234,22 +234,29 @@ async function fetchWithTimeout(url, timeout = CONFIG.FETCH_TIMEOUT) {
 
 // Fetch image from API with retry logic
 async function fetchImage(sourceId, date, attempt = 1) {
-    const imageScale = sourceId === 10 ? 1.87 : 2.5;
-    const apiParams = new URLSearchParams({
-        date: date,
-        imageScale: imageScale,
-        layers: `[${sourceId},1,100]`,
-        width: CONFIG.FRAME_WIDTH,
-        height: CONFIG.FRAME_HEIGHT,
-        x0: 0,
-        y0: 0,
-        display: 'true',
-        watermark: 'false'
-    });
+    // Corona needs higher scale and resolution to be visible
+    const imageScale = sourceId === 4 ? 8 : 2.5;  // Corona: 8, Sun: 2.5
+    const width = sourceId === 4 ? 1920 : 1920;   // Both use 1920 width
+    const height = sourceId === 4 ? 1200 : 1920;  // Corona: 1200, Sun: 1920
+    
+    // Build URL with string concatenation to avoid encoding brackets
+    const apiParams = 
+        `date=${date}` +
+        `&imageScale=${imageScale}` +
+        `&layers=[${sourceId},1,100]` +
+        `&width=${width}` +
+        `&height=${height}` +
+        `&x0=0&y0=0` +
+        `&display=true&watermark=false`;
     
     const url = CONFIG.USE_CLOUDFLARE 
         ? `${CONFIG.CLOUDFLARE_URL}/takeScreenshot?${apiParams}`
         : `https://api.helioviewer.org/v2/takeScreenshot/?${apiParams}`;
+    
+    // Debug logging for first few attempts
+    if (attempt === 1 && Math.random() < 0.01) {
+        console.log(`  Debug URL for ${sourceId === 4 ? 'corona' : 'sun'}:`, url);
+    }
     
     try {
         const response = await fetchWithTimeout(url);
@@ -283,7 +290,9 @@ async function fetchImageWithFallback(targetDate, sourceId, sourceType) {
         const tryDate = new Date(targetDate.getTime() + minuteOffset * 60 * 1000);
         
         try {
-            const imageBuffer = await fetchImage(sourceId, tryDate.toISOString());
+            // Remove milliseconds from ISO string as API doesn't accept them
+            const dateStr = tryDate.toISOString().replace(/\.\d{3}/, '');
+            const imageBuffer = await fetchImage(sourceId, dateStr);
             
             // Validate image buffer
             if (!imageBuffer || imageBuffer.length < 1000) {
@@ -411,28 +420,61 @@ async function processFrame(frameDate, isRetry = false) {
             fetchImageWithFallback(frameDate, 10, 'SDO')
         ]);
         
-        // Apply circular feather to sun disk
-        const featheredSunDisk = await applyCircularFeather(
-            sunDiskResult.buffer,
-            1435,
-            CONFIG.COMPOSITE_RADIUS,
-            CONFIG.FEATHER_RADIUS
-        );
-        
-        // Create composite with brighter, warmer grading
-        const composite = await sharp(coronaResult.buffer)
+        // Apply warm grading to sun disk BEFORE feathering
+        const gradedSunDisk = await sharp(sunDiskResult.buffer)
             .modulate({
                 brightness: 1.3,    // Brighter sun
                 saturation: 0.95    // Warmer tones
             })
             .gamma(1.05)           // Gentler midtone boost
             .linear(1.3, -8)       // More punch and contrast
-            .composite([{
-                input: featheredSunDisk,
-                top: Math.floor((CONFIG.FRAME_HEIGHT - 1435) / 2),
-                left: Math.floor((CONFIG.FRAME_WIDTH - 1435) / 2),
-                blend: 'screen'
-            }])
+            .toBuffer();
+        
+        // Apply circular feather to graded sun disk
+        // Keep original size of 1435 which extends beyond frame for dramatic effect
+        const featheredSunDisk = await applyCircularFeather(
+            gradedSunDisk,
+            1435,  // Original size - larger than frame height
+            CONFIG.COMPOSITE_RADIUS,
+            CONFIG.FEATHER_RADIUS
+        );
+        
+        // Apply cool/blue grading to corona for white appearance
+        const gradedCorona = await sharp(coronaResult.buffer)
+            .modulate({ 
+                saturation: 0.3,    // Desaturate for white appearance
+                brightness: 1.0, 
+                hue: -5             // Slight blue shift
+            })
+            .tint({ r: 220, g: 230, b: 240 })  // Blue-white tint
+            .linear(1.2, -12)
+            .gamma(1.2)
+            .toBuffer();
+        
+        // Create large canvas to accommodate both images
+        const compositeImage = await sharp({
+            create: {
+                width: 1920,
+                height: 1435,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 }
+            }
+        })
+        .composite([
+            { input: gradedCorona, gravity: 'center' },
+            { input: featheredSunDisk, gravity: 'center', blend: 'screen' }
+        ])
+        .png()
+        .toBuffer();
+        
+        // Crop to final frame dimensions
+        const composite = await sharp(compositeImage)
+            .extract({
+                left: 230,
+                top: 117,
+                width: CONFIG.FRAME_WIDTH,
+                height: CONFIG.FRAME_HEIGHT
+            })
             .jpeg({ quality: 95, mozjpeg: true })
             .toBuffer();
         
@@ -791,6 +833,90 @@ async function generateSocialVideo(days, outputName) {
     }
 }
 
+// Deploy updated website to Cloudflare Pages
+async function deployToCloudflarePages() {
+    try {
+        console.log('\n📄 Deploying updated website to Cloudflare Pages...');
+        
+        const deployScript = path.join(CONFIG.BASE_DIR, 'deploy_to_pages.js');
+        const exists = await fs.access(deployScript).then(() => true).catch(() => false);
+        
+        if (!exists) {
+            console.log('  ⚠️ Deploy script not found, skipping deployment');
+            return;
+        }
+        
+        const { stdout, stderr } = await execAsync(
+            `cd "${CONFIG.BASE_DIR}" && node "${deployScript}"`,
+            {
+                env: process.env,
+                timeout: CONFIG.VIDEO_TIMEOUT,
+                maxBuffer: 10 * 1024 * 1024
+            }
+        );
+        
+        if (stdout.includes('Deployment successful') || stdout.includes('deployed')) {
+            console.log('  ✅ Website deployed with updated video IDs');
+        } else if (stderr) {
+            console.error('  ⚠️ Deploy warning:', stderr);
+        }
+        
+    } catch (error) {
+        console.error(`  ❌ Website deployment failed: ${error.message}`);
+        // Don't throw - deployment failure shouldn't stop the process
+    }
+}
+
+// Deploy updated website to Cloudflare Pages
+async function deployToCloudflarePages() {
+    console.log('\n🌐 Deploying updated website to Cloudflare Pages...');
+    
+    try {
+        // Check if deployment script exists
+        const deployScript = path.join(CONFIG.BASE_DIR, 'deploy_to_pages.js');
+        const exists = await fs.access(deployScript).then(() => true).catch(() => false);
+        
+        if (!exists) {
+            console.log('  ⚠️ Deployment script not found, skipping website update');
+            return;
+        }
+        
+        // Create cloudflare_videos.json with latest video IDs
+        const today = new Date().toISOString().split('T')[0];
+        const videoIds = {
+            full: 'e1c32f106f9472fce3a58ec950c430d8',  // Will be updated by deploy script
+            portrait: '18f9447ca843d9142f66587c3c609392',
+            social: 'a7f1bb1b4c3a2da2ffa7eecf9a411e0e',
+            generatedDate: today,
+            lastUpdate: new Date().toISOString()
+        };
+        
+        const videoJsonPath = path.join(CONFIG.BASE_DIR, 'cloudflare_videos.json');
+        await fs.writeFile(videoJsonPath, JSON.stringify(videoIds, null, 2));
+        console.log(`  📝 Updated video metadata for ${today}`);
+        
+        // Run deployment script
+        const { stdout, stderr } = await execAsync(
+            `cd "${CONFIG.BASE_DIR}" && node "${deployScript}"`,
+            {
+                env: { ...process.env },
+                timeout: CONFIG.VIDEO_TIMEOUT,
+                maxBuffer: 10 * 1024 * 1024
+            }
+        );
+        
+        if (stdout.includes('Deployment successful') || stdout.includes('deployed')) {
+            console.log('  ✅ Website deployed with updated video IDs and metadata');
+        } else if (stderr) {
+            console.error('  ⚠️ Deploy warning:', stderr);
+        }
+        
+    } catch (error) {
+        console.error(`  ❌ Website deployment failed: ${error.message}`);
+        // Don't throw - deployment failure shouldn't stop the process
+    }
+}
+
 // Upload video to Cloudflare Stream
 async function uploadToCloudflare(videoPath, videoName) {
     try {
@@ -874,6 +1000,52 @@ async function cleanupOldFrames() {
     } catch (error) {
         console.error('❌ Cleanup failed:', error.message);
         // Don't throw - cleanup failure shouldn't stop the process
+    }
+}
+
+// Clean up old videos (keep only last 3 days of videos)
+async function cleanupOldVideos() {
+    console.log('\n🎬 Cleaning up old videos...');
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 3); // Keep last 3 days of videos
+    
+    try {
+        const files = await fs.readdir(CONFIG.VIDEOS_DIR);
+        let deletedCount = 0;
+        let freedSpace = 0;
+        
+        for (const file of files) {
+            // Skip if not a video file with date pattern
+            const match = file.match(/heliosphere_.*_(\d{4}-\d{2}-\d{2})\.mp4$/);
+            if (!match) continue;
+            
+            const fileDate = new Date(match[1]);
+            if (fileDate < cutoffDate) {
+                const filePath = path.join(CONFIG.VIDEOS_DIR, file);
+                
+                // Get file size before deletion
+                try {
+                    const stats = await fs.stat(filePath);
+                    freedSpace += stats.size;
+                    
+                    await fs.unlink(filePath);
+                    deletedCount++;
+                    console.log(`  Deleted video: ${file}`);
+                } catch (error) {
+                    console.error(`  Failed to delete ${file}:`, error.message);
+                }
+            }
+        }
+        
+        if (deletedCount > 0) {
+            console.log(`✅ Cleaned up ${deletedCount} old videos (${(freedSpace / 1024 / 1024).toFixed(2)} MB freed)`);
+        } else {
+            console.log('✅ No old videos to clean');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cleaning up videos:', error);
     }
 }
 
@@ -1003,6 +1175,9 @@ async function runDailyProduction() {
             
             // Generate social media video (30 days, 1200x1200 cropped, 60 seconds)
             await generateSocialVideo(CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+            
+            // Deploy updated website with new video IDs
+            await deployToCloudflarePages();
         } else {
             console.error('⚠️ No frames available for video generation');
             exitCode = 2;
@@ -1010,6 +1185,9 @@ async function runDailyProduction() {
         
         // Clean up old frames
         await cleanupOldFrames();
+        
+        // Clean up old videos
+        await cleanupOldVideos();
         
         productionState.status = 'completed';
         productionState.lastUpdate = Date.now();
