@@ -820,11 +820,11 @@ async function generateVideo(frames, days, outputName) {
     
     await fs.writeFile(frameListPath, frameList.join('\n'));
     
-    // Generate video with FFmpeg
-    const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mp4`);
+    // Generate video with FFmpeg (MJPEG uses .mov container)
+    const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mov`);
     
     const ffmpegCommand = `ffmpeg -y -r ${CONFIG.FPS} -f concat -safe 0 -i "${frameListPath}" ` +
-        `-c:v libx264 -pix_fmt yuv420p -preset slow -crf 18 "${outputPath}"`;
+        `-c:v mjpeg -q:v 1 "${outputPath}"`;
     
     try {
         await execAsync(ffmpegCommand, { timeout: 300000 });
@@ -930,18 +930,24 @@ async function runDailyProduction() {
         
         // Generate initial videos (basic format)
         await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_full');
-        await generateVideo(frames, CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+        await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_portrait');  // Portrait uses full 56 days
         
-        // Generate all video formats (MJPEG) and upload to Cloudflare
-        console.log('\n🎬 Generating production videos and uploading to Cloudflare...');
+        // Upload videos to Cloudflare Stream
+        console.log('\n☁️ Uploading videos to Cloudflare Stream...');
         try {
-            const { stdout, stderr } = await execAsync('cd /opt/heliosphere && node generate_videos_only.js', {
+            const uploadCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
+                `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_STREAM_API_TOKEN ` +
+                `node cloudflare_tus_upload.js videos/heliosphere_full_${new Date().toISOString().split('T')[0]}.mov full && ` +
+                `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_STREAM_API_TOKEN ` +
+                `node cloudflare_tus_upload.js videos/heliosphere_portrait_${new Date().toISOString().split('T')[0]}.mov portrait`;
+            
+            const { stdout, stderr } = await execAsync(uploadCommand, {
                 timeout: 1200000 // 20 minutes timeout
             });
             console.log(stdout);
-            if (stderr) console.error('Video generation warnings:', stderr);
+            if (stderr) console.error('Upload warnings:', stderr);
         } catch (error) {
-            console.error('Failed to generate/upload videos:', error.message);
+            console.error('Failed to upload videos:', error.message);
             productionState.errors.push({
                 type: 'video_upload',
                 message: error.message,
