@@ -1,37 +1,96 @@
-#!/usr/bin/env node
+#\!/usr/bin/env node
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
-const execAsync = promisify(exec);
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { fileURLToPath } from 'url';
 
-async function main() {
-    console.log('🎬 Generating portrait video from full video...');
+const execAsync = promisify(exec);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const CONFIG = {
+    FRAMES_DIR: '/opt/heliosphere/frames',
+    VIDEOS_DIR: '/opt/heliosphere/videos',
+    TEMP_DIR: '/tmp/heliosphere',
+    FPS: 24,
+    TOTAL_DAYS: 56
+};
+
+async function getAllFrames() {
+    console.log('📊 Collecting all frames...');
+    const frames = [];
     
-    const inputVideo = '/opt/heliosphere/videos/heliosphere_full_2025-08-19.mp4';
-    const outputVideo = '/opt/heliosphere/videos/heliosphere_portrait_2025-08-19.mp4';
+    const dirs = await fs.readdir(CONFIG.FRAMES_DIR);
+    const frameDirs = dirs.filter(d => d.match(/^\d{4}-\d{2}-\d{2}$/)).sort();
     
-    // Crop center 675x1200 from 1460x1200 video
-    const cropWidth = 675;
-    const cropX = Math.floor((1460 - cropWidth) / 2);
+    for (const dir of frameDirs) {
+        const dirPath = path.join(CONFIG.FRAMES_DIR, dir);
+        const files = await fs.readdir(dirPath);
+        const frameFiles = files.filter(f => f.endsWith('.jpg')).sort();
+        
+        for (const file of frameFiles) {
+            frames.push(path.join(dirPath, file));
+        }
+    }
     
-    const ffmpegCmd = `ffmpeg -y -i "${inputVideo}" -vf "crop=${cropWidth}:1200:${cropX}:0" -c:v libx264 -preset fast -crf 20 "${outputVideo}"`;
+    console.log(`✓ Found ${frames.length} total frames`);
+    return frames;
+}
+
+async function generatePortraitVideo(frames) {
+    console.log(`\n🎬 Generating heliosphere_portrait (56 days, vertical crop)...`);
+    const startTime = Date.now();
     
-    console.log('   Converting to 9:16 portrait format...');
-    console.log(`   Input: ${inputVideo}`);
-    console.log(`   Output: ${outputVideo}`);
+    const framesPerDay = 96;
+    const totalFramesNeeded = CONFIG.TOTAL_DAYS * framesPerDay;
+    const videoFrames = frames.slice(-totalFramesNeeded);
+    
+    // IMPORTANT: Reverse to play chronologically
+    videoFrames.reverse();
+    
+    console.log(`  Using ${videoFrames.length} frames`);
+    console.log(`  Duration: ${(videoFrames.length / CONFIG.FPS).toFixed(1)} seconds`);
+    
+    await fs.mkdir(CONFIG.TEMP_DIR, { recursive: true });
+    const frameListPath = path.join(CONFIG.TEMP_DIR, 'portrait_frames.txt');
+    const frameList = videoFrames.map(f => `file '${f}'`).join('\n');
+    await fs.writeFile(frameListPath, frameList);
+    
+    const outputPath = path.join(CONFIG.VIDEOS_DIR, `heliosphere_portrait_${new Date().toISOString().split('T')[0]}.mov`);
+    
+    // Portrait crop: Center crop to 900x1200 (3:4 aspect ratio)
+    const ffmpegCommand = `ffmpeg -y -r ${CONFIG.FPS} -f concat -safe 0 -i "${frameListPath}" ` +
+        `-vf "crop=900:1200:280:0" ` +
+        `-c:v mjpeg -q:v 1 "${outputPath}"`;
+    
+    console.log('  Running FFmpeg (MJPEG lossless, portrait crop)...');
     
     try {
-        await execAsync(ffmpegCmd, { maxBuffer: 100 * 1024 * 1024 });
+        await execAsync(ffmpegCommand);
+        const stats = await fs.stat(outputPath);
+        const elapsed = (Date.now() - startTime) / 1000;
         
-        const stats = await fs.stat(outputVideo);
-        console.log(`   ✓ Generated: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
-        console.log('✅ Portrait video created successfully!');
+        console.log(`✓ Portrait video generated in ${elapsed.toFixed(1)} seconds\!`);
+        console.log(`  Size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+        
+        return outputPath;
     } catch (error) {
-        console.error('❌ Failed:', error.message);
-        process.exit(1);
+        console.error(`❌ Failed:`, error.message);
+        return null;
+    }
+}
+
+async function main() {
+    console.log('🚀 Portrait Video Generation\n');
+    
+    const frames = await getAllFrames();
+    const portraitVideo = await generatePortraitVideo(frames);
+    
+    if (portraitVideo) {
+        console.log(`\n✅ Portrait video ready at: ${portraitVideo}`);
     }
 }
 
 main().catch(console.error);
+EOF < /dev/null

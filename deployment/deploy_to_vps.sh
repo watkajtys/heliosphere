@@ -1,24 +1,25 @@
 #!/bin/bash
 
-# Heliosphere VPS Deployment Script
+# Heliolens VPS Deployment Script
 # Deploy to: 65.109.0.112 (builtbyvibes-server)
 
 VPS_IP="65.109.0.112"
 VPS_USER="root"
-VPS_DIR="/opt/heliosphere"
+VPS_DIR="/opt/heliolens"
 
 echo "╔════════════════════════════════════════╗"
-echo "║   Deploying Heliosphere to VPS         ║"
+echo "║   Deploying Heliolens to VPS           ║"
 echo "║   Server: $VPS_IP                      ║"
 echo "╚════════════════════════════════════════╝"
 
 # Files to deploy
 FILES=(
-    "vps_production.js"
-    "vps_pipeline_test.js"
+    "vps_production_unified.js"
+    "vps_unified_test.js"
     "cloud_monitor.html"
     "package.json"
     "package-lock.json"
+    "ecosystem.config.js"
 )
 
 echo ""
@@ -38,15 +39,15 @@ echo "🔧 Setting up VPS environment..."
 
 # Run setup commands on VPS
 ssh $VPS_USER@$VPS_IP << 'ENDSSH'
-cd /opt/heliosphere
+cd /opt/heliolens
 
 # Create required directories
 echo "Creating directories..."
-mkdir -p /opt/heliosphere/output
-mkdir -p /opt/heliosphere/cache
-mkdir -p /opt/heliosphere/logs
-mkdir -p /tmp/heliosphere
-mkdir -p /opt/heliosphere/output/frames
+mkdir -p /opt/heliolens/output
+mkdir -p /opt/heliolens/cache
+mkdir -p /opt/heliolens/logs
+mkdir -p /tmp/heliolens
+mkdir -p /opt/heliolens/output/frames
 
 # Install dependencies
 echo "Installing Node.js dependencies..."
@@ -59,8 +60,8 @@ if ! command -v pm2 &> /dev/null; then
 fi
 
 # Stop any existing instance
-pm2 stop heliosphere 2>/dev/null || true
-pm2 delete heliosphere 2>/dev/null || true
+pm2 stop heliolens-unified 2>/dev/null || true
+pm2 delete heliolens-unified 2>/dev/null || true
 
 echo ""
 echo "✅ VPS setup complete!"
@@ -70,8 +71,8 @@ echo ""
 echo "🚀 Deployment complete!"
 echo ""
 echo "Next steps:"
-echo "1. SSH into VPS: ssh $VPS_USER@$VPS_IP"
-echo "2. Test pipeline: cd $VPS_DIR && node vps_pipeline_test.js"
-echo "3. Start production: pm2 start vps_production.js --name heliosphere"
-echo "4. Monitor at: http://$VPS_IP:3000/monitor"
-echo "5. View logs: pm2 logs heliosphere"
+echo "1. SSH into VPS: ssh vps"
+echo "2. Test pipeline: cd $VPS_DIR && node vps_unified_test.js"
+echo "3. Start production: pm2 start ecosystem.config.js"
+echo "4. Monitor at: http://$VPS_IP:3001/monitor"
+echo "5. View logs: pm2 logs heliolens-unified"

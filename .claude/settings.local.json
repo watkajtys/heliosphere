@@ -46,7 +46,11 @@
       "Bash(npx wrangler:*)",
       "WebFetch(domain:heliosphere.pages.dev)",
       "WebFetch(domain:5857ec7a.heliosphere.pages.dev)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(for frame in 0000 0600 1200 1800)",
+      "Bash(do scp \"vps:/opt/heliosphere/frames/2025-07-10/frame_$frame.jpg\" \"corona_fixed_frames/frame_$frame.jpg\")",
+      "Bash(done)",
+      "WebFetch(domain:719456a8.heliolens.pages.dev)"
     ],
     "deny": []
   }

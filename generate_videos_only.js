@@ -149,6 +149,27 @@ async function main() {
         }
     }
     
+    // Deploy to Cloudflare Pages
+    console.log('\n📄 Deploying to Cloudflare Pages...');
+    try {
+        const deployCommand = `cd /opt/heliosphere && node deploy_to_pages.js`;
+        const deployResult = await execAsync(deployCommand, { timeout: 120000 });
+        console.log(deployResult.stdout);
+    } catch (error) {
+        console.error('Failed to deploy to Pages:', error.message);
+    }
+    
+    // Post to Twitter
+    console.log('\n🐦 Posting to Twitter...');
+    try {
+        const twitterCommand = `cd /opt/heliosphere && node post_twitter_auto.js`;
+        const twitterResult = await execAsync(twitterCommand, { timeout: 600000 }); // 10 minute timeout
+        console.log(twitterResult.stdout);
+    } catch (error) {
+        console.error('Failed to post to Twitter:', error.message);
+        // Don't fail the whole pipeline if Twitter posting fails
+    }
+    
     console.log('\n🎉 Complete\!');
 }
 

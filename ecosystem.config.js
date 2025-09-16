@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'heliosphere-prod',
+    name: 'heliolens-unified',
     script: './vps_production_unified.js',
     args: '--run',
     instances: 1,

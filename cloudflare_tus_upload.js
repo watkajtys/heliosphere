@@ -11,7 +11,7 @@ import * as tus from 'tus-js-client';
 // Cloudflare configuration
 const CLOUDFLARE_CONFIG = {
     ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-    API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+    API_TOKEN: process.env.CLOUDFLARE_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN,
     get TUS_ENDPOINT() {
         return `https://api.cloudflare.com/client/v4/accounts/${this.ACCOUNT_ID}/stream`;
     }

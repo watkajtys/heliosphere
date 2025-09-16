@@ -54,12 +54,30 @@ node vps_optimized_test.js
 ssh root@your-vps-ip
 
 # Deploy with PM2
-pm2 start vps_production_optimized.js --name heliolens
+pm2 start vps_daily_cron.js --name heliolens-daily
 pm2 save
 pm2 startup
 
-# Set up daily cron
-echo "0 0 * * * cd /opt/heliolens && node vps_production_optimized.js" | crontab -
+# The script runs every minute and checks if it's time to run production
+# Production runs daily at midnight UTC
+```
+
+### 🔍 Monitoring Production Status
+
+```bash
+# Quick status check (from local machine)
+node check_status.js
+
+# Manual status check
+ssh vps "df -h / | tail -1 && pm2 status && ps aux | grep ffmpeg | wc -l"
+
+# Check logs
+ssh vps "pm2 logs heliolens-daily --lines 50"
+
+# Monitor endpoints (when production is running)
+http://your-vps:3001/monitor  # Production monitor
+http://your-vps:3002/monitor  # Test monitor
+http://your-vps:3003/monitor  # Optimized monitor
 ```
 
 ## 📊 Performance
@@ -352,6 +370,13 @@ graph LR
 
 ### Common Issues
 
+**Production not running / stuck**
+- Run `node check_status.js` to see current state
+- Check disk space: `ssh vps "df -h"`
+- Clear old videos if disk > 80% full
+- Remove stale lock: `ssh vps "rm -f /opt/heliosphere/daily_production.lock"`
+- Check for high PM2 restarts: `ssh vps "pm2 status"`
+
 **Frames not fetching**
 - Check Helioviewer API status
 - Verify date calculations (48-hour delay)
@@ -371,6 +396,12 @@ graph LR
 - Reduce PROCESS_CONCURRENCY
 - Increase Node heap size: `--max-old-space-size=4096`
 - Use streaming for large files
+
+**Disk space issues**
+- Production needs 10GB+ free space
+- Delete old videos: `ssh vps "rm /opt/heliosphere/videos/*2025-09-0[1-5]*"`
+- Keep only latest 3 days of videos
+- Monitor with: `ssh vps "du -sh /opt/heliosphere/videos"`
 
 ## 🚀 Roadmap
 

@@ -52,7 +52,7 @@ const CONFIG = {
     FALLBACK_STEPS_SDO: [0, 1, -1, 3, -3, 5, -5, 7, -7],   // Alternate +/- for better coverage
     
     // Cloudflare proxy
-    USE_CLOUDFLARE: true,
+    USE_CLOUDFLARE: false,  // Disabled - proxy not working
     CLOUDFLARE_URL: 'https://heliosphere-proxy.matty-f7e.workers.dev',
     
     // Storage paths
@@ -231,7 +231,7 @@ async function fetchImageWithRetry(sourceId, date, retries = CONFIG.MAX_RETRIES)
     
     const apiUrl = `https://api.helioviewer.org/v2/takeScreenshot/?` +
         `date=${date}` +
-        `&layers=[${sourceId},1,100]` +
+        `&layers=%5B${sourceId},1,100%5D` +  // URL-encoded brackets
         `&imageScale=${imageScale}` +
         `&width=${width}` +
         `&height=${height}` +
