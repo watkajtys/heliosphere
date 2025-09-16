@@ -823,8 +823,11 @@ async function generateVideo(frames, days, outputName) {
     // Generate video with FFmpeg (MJPEG uses .mov container)
     const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mov`);
     
+    // Add crop filter for portrait video (900x1200 center crop from 1460x1200)
+    const cropFilter = outputName.includes('portrait') ? `-vf "crop=900:1200:280:0" ` : '';
+    
     const ffmpegCommand = `ffmpeg -y -r ${CONFIG.FPS} -f concat -safe 0 -i "${frameListPath}" ` +
-        `-c:v mjpeg -q:v 1 "${outputPath}"`;
+        `${cropFilter}-c:v mjpeg -q:v 1 "${outputPath}"`;
     
     try {
         await execAsync(ffmpegCommand, { timeout: 300000 });
@@ -932,20 +935,56 @@ async function runDailyProduction() {
         await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_full');
         await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_portrait');  // Portrait uses full 56 days
         
-        // Upload videos to Cloudflare Stream
+        // Upload videos to Cloudflare Stream and get video IDs
         console.log('\n☁️ Uploading videos to Cloudflare Stream...');
+        let fullVideoId = null;
+        let portraitVideoId = null;
+        
         try {
-            const uploadCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
+            // Upload full video
+            const fullUploadCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
                 `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_STREAM_API_TOKEN ` +
-                `node cloudflare_tus_upload.js videos/heliosphere_full_${new Date().toISOString().split('T')[0]}.mov full && ` +
+                `node cloudflare_tus_upload.js videos/heliosphere_full_${new Date().toISOString().split('T')[0]}.mov full`;
+            
+            const { stdout: fullStdout } = await execAsync(fullUploadCommand, { timeout: 600000 });
+            console.log(fullStdout);
+            
+            // Extract video ID from output
+            const fullIdMatch = fullStdout.match(/Video ID: ([a-f0-9]{32})/);
+            if (fullIdMatch) {
+                fullVideoId = fullIdMatch[1];
+                console.log(`✓ Full video uploaded: ${fullVideoId}`);
+            }
+            
+            // Upload portrait video
+            const portraitUploadCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
                 `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_STREAM_API_TOKEN ` +
                 `node cloudflare_tus_upload.js videos/heliosphere_portrait_${new Date().toISOString().split('T')[0]}.mov portrait`;
             
-            const { stdout, stderr } = await execAsync(uploadCommand, {
-                timeout: 1200000 // 20 minutes timeout
-            });
-            console.log(stdout);
-            if (stderr) console.error('Upload warnings:', stderr);
+            const { stdout: portraitStdout } = await execAsync(portraitUploadCommand, { timeout: 600000 });
+            console.log(portraitStdout);
+            
+            // Extract video ID from output
+            const portraitIdMatch = portraitStdout.match(/Video ID: ([a-f0-9]{32})/);
+            if (portraitIdMatch) {
+                portraitVideoId = portraitIdMatch[1];
+                console.log(`✓ Portrait video uploaded: ${portraitVideoId}`);
+            }
+            
+            // Update website with new video IDs
+            if (fullVideoId && portraitVideoId) {
+                console.log('\n🌐 Updating website with new video IDs...');
+                const updateCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
+                    `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN ` +  // Use main token for Pages
+                    `node update_website.js ${fullVideoId} ${portraitVideoId}`;
+                
+                const { stdout: updateStdout } = await execAsync(updateCommand, { timeout: 60000 });
+                console.log(updateStdout);
+                console.log('✓ Website updated and deployed!');
+            } else {
+                console.error('⚠️ Could not extract video IDs for website update');
+            }
+            
         } catch (error) {
             console.error('Failed to upload videos:', error.message);
             productionState.errors.push({
