@@ -49,7 +49,7 @@ const CONFIG = {
     // Fallback limits - max ±7min to stay safely within 15min frame boundaries
     MAX_FALLBACK_MINUTES: 7, // Stay well within 15min frame boundary
     FALLBACK_STEPS_SOHO: [0, -1, -3, -5, -7, 1, 3, 5, 7],  // Try negative first to avoid cascade
-    FALLBACK_STEPS_SDO: [0, 1, -1, 3, -3, 5, -5, 7, -7],   // Alternate +/- for better coverage
+    FALLBACK_STEPS_SDO: [0, -1, -3, -5, -7, 1, 3, 5, 7],   // Match SOHO pattern for consistent success
     
     // Cloudflare proxy
     USE_CLOUDFLARE: false,  // Disabled - proxy not working
@@ -85,6 +85,7 @@ let productionState = {
     retryCount: 0,
     errors: [],
     frameManifest: {},
+    lastSuccessfulFrame: null,  // Track last successful composite frame for persistence
     checksums: {
         corona: new Map(),  // checksum -> [frameNumbers]
         sunDisk: new Map()  // checksum -> [frameNumbers]
@@ -92,7 +93,8 @@ let productionState = {
     failureStats: {
         coronaFailures: 0,
         sunDiskFailures: 0,
-        bothFailures: 0
+        bothFailures: 0,
+        framesPersisted: 0
     }
 };
 
@@ -103,10 +105,17 @@ app.use(express.json());
 // Serve static files for monitor
 app.use(express.static('/opt/heliosphere'));
 
-// Ensure directories exist
+// Ensure directories exist and cleanup temp
 async function ensureDirectories() {
     await fs.mkdir(CONFIG.FRAMES_DIR, { recursive: true });
     await fs.mkdir(CONFIG.VIDEOS_DIR, { recursive: true });
+    
+    // Clean and recreate temp directory
+    try {
+        await fs.rm(CONFIG.TEMP_DIR, { recursive: true, force: true });
+    } catch (e) {
+        // Ignore if doesn't exist
+    }
     await fs.mkdir(CONFIG.TEMP_DIR, { recursive: true });
 }
 
@@ -125,7 +134,8 @@ async function loadState() {
             saved.missingFrames = [];
         }
         if (!saved.failureStats) {
-            saved.failureStats = { coronaFailures: 0, sunDiskFailures: 0, bothFailures: 0 };
+            saved.failureStats = { coronaFailures: 0, sunDiskFailures: 0, bothFailures: 0,
+        framesPersisted: 0 };
         }
         productionState = { ...productionState, ...saved };
         console.log('📋 Loaded previous state');
@@ -263,7 +273,8 @@ async function fetchImageWithRetry(sourceId, date, retries = CONFIG.MAX_RETRIES)
         } catch (error) {
             await fs.unlink(tempFile).catch(() => {});
             if (attempt === retries) {
-                throw error;
+                productionState.errors.push({ type: "video_generation", message: error.message, video: outputName });
+        return null;
             }
             productionState.retryCount++;
             console.log(`  Retry ${attempt}/${retries} for ${sourceId === 4 ? 'SOHO' : 'SDO'}: ${error.message}`);
@@ -435,6 +446,8 @@ async function interpolateFrame(prevFrame, nextFrame) {
 
 // Process frames with parallel fetching
 async function processFramesParallel(frames) {
+    const totalFramesToProcess = frames.length;
+    productionState.totalFrames = totalFramesToProcess;
     console.log(`\n📊 Processing ${frames.length} frames with parallel fetching`);
     console.log(`   Fetch concurrency: ${CONFIG.FETCH_CONCURRENCY}`);
     console.log(`   Process concurrency: ${CONFIG.PROCESS_CONCURRENCY}`);
@@ -483,9 +496,31 @@ async function processFramesParallel(frames) {
                     coronaError: coronaError?.message,
                     sunDiskError: sunDiskError?.message
                 });
-                return null;
+                // Use last successful frame to prevent black flash
+                if (productionState.lastSuccessfulFrame) {
+                    productionState.failureStats.framesPersisted++;
+                    console.log("  Using frame persistence for " + number + " (failed components)");
+                    return {
+                        frameNumber: number,
+                        frameDate: date,
+                        corona: productionState.lastSuccessfulFrame.corona,
+                        sunDisk: productionState.lastSuccessfulFrame.sunDisk,
+                        isPersisted: true
+                    };
+                } else {
+                    console.log("  No previous frame available for persistence - dropping frame " + number);
+                    return null;
+                }
             }
             
+            // Store this successful frame for potential reuse
+            productionState.lastSuccessfulFrame = {
+                frameNumber: number,
+                frameDate: date,
+                corona: coronaResult,
+                sunDisk: sunDiskResult
+            };
+
             return {
                 frameNumber: number,
                 frameDate: date,
@@ -549,7 +584,7 @@ async function processFramesParallel(frames) {
                 await saveManifest();
                 
                 // Memory cleanup every N frames
-                if (productionState.processedFrames % CONFIG.MEMORY_CLEANUP_INTERVAL === 0) {
+                if (productionState.processedFrames % 25 === 0) {
                     console.log(`🧹 Performing memory cleanup at frame ${productionState.processedFrames}`);
                     
                     // Clear old checksums (keep only last 1000)
@@ -741,7 +776,7 @@ async function processDateRange() {
         const frameKey = getFrameKey(frames[i]);
         const framePath = getFramePath(frames[i]);
         
-        if (!productionState.frameManifest[frameKey] || !await fileExists(framePath)) {
+        if (!await fileExists(framePath)) {
             framesToProcess.push({ number: i, date: frames[i] });
         } else {
             productionState.skippedFrames++;
@@ -821,13 +856,26 @@ async function generateVideo(frames, days, outputName) {
     await fs.writeFile(frameListPath, frameList.join('\n'));
     
     // Generate video with FFmpeg (MJPEG uses .mov container)
-    const outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mov`);
+    let outputPath = path.join(CONFIG.VIDEOS_DIR, `${outputName}_${new Date().toISOString().split('T')[0]}.mov`);
     
-    // Add crop filter for portrait video (900x1200 center crop from 1460x1200)
-    const cropFilter = outputName.includes('portrait') ? `-vf "crop=900:1200:280:0" ` : '';
+    // Add crop filters based on video type
+    let cropFilter = '';
+    let codec = '-c:v libx264 -crf 23 -preset slow -pix_fmt yuv420p';  // H.264 with good compression
+    
+    if (outputName.includes('portrait')) {
+        // Portrait: 900x1200 center crop from 1460x1200
+        cropFilter = `-vf "crop=900:1200:280:0" `;
+    } else if (outputName.includes('social')) {
+        // Social: 1200x1200 square crop from center
+        cropFilter = `-vf "crop=1200:1200:130:0" `;
+        // Use H.264 for social media compatibility
+        codec = '-c:v libx264 -crf 25 -preset slow -pix_fmt yuv420p';
+        // Change extension to mp4 for social
+        outputPath = outputPath.replace('.mov', '.mp4');
+    }
     
     const ffmpegCommand = `ffmpeg -y -r ${CONFIG.FPS} -f concat -safe 0 -i "${frameListPath}" ` +
-        `${cropFilter}-c:v mjpeg -q:v 1 "${outputPath}"`;
+        `${cropFilter}${codec} "${outputPath}"`;
     
     try {
         await execAsync(ffmpegCommand, { timeout: 300000 });
@@ -841,7 +889,8 @@ async function generateVideo(frames, days, outputName) {
         return outputPath;
     } catch (error) {
         console.error(`Failed to generate video: ${error.message}`);
-        throw error;
+        productionState.errors.push({ type: "video_generation", message: error.message, video: outputName });
+        return null;
     }
 }
 
@@ -898,6 +947,7 @@ function generateReport() {
     console.log(`║ Corona Failures:  ${String(productionState.failureStats.coronaFailures).padEnd(33)}║`);
     console.log(`║ Sun Disk Failures:${String(productionState.failureStats.sunDiskFailures).padEnd(33)}║`);
     console.log(`║ Both Failed:      ${String(productionState.failureStats.bothFailures).padEnd(33)}║`);
+    console.log("║ Frames Persisted: " + String(productionState.failureStats.framesPersisted).padEnd(33) + "║");
     console.log('╠════════════════════════════════════════════════════╣');
     console.log(`║ Runtime:          ${String((runtime / 60).toFixed(1) + ' minutes').padEnd(33)}║`);
     console.log(`║ Speed:            ${String(fps + ' frames/min').padEnd(33)}║`);
@@ -918,10 +968,31 @@ function generateReport() {
 async function runDailyProduction() {
     console.log('╔════════════════════════════════════════╗');
     console.log('║   Heliosphere Unified Production       ║');
+    // Reconcile manifest with disk state first
+    console.log("Reconciling manifest with disk state...");
+    try {
+        const reconcileModule = await import("./reconcile_manifest.js");
+        await reconcileModule.reconcileManifest();
+    } catch (err) {
+        console.error("Failed to reconcile manifest:", err);
+    }
+
     console.log('╚════════════════════════════════════════╝');
     
+    // Reset production state for new run
     productionState.status = 'running';
     productionState.startTime = Date.now();
+    productionState.processedFrames = 0;
+    productionState.skippedFrames = 0;
+    productionState.fetchedFrames = 0;
+    productionState.interpolatedFrames = 0;
+    productionState.missingFrames = [];
+    productionState.fallbacksUsed = 0;
+    productionState.retryCount = 0;
+    productionState.errors = [];
+    productionState.checksums = { corona: 0, sunDisk: 0 };
+    productionState.failureStats = { coronaFailures: 0, sunDiskFailures: 0, bothFailures: 0,
+        framesPersisted: 0 };
     
     try {
         // Load previous state
@@ -931,67 +1002,79 @@ async function runDailyProduction() {
         // Process all frames
         const frames = await processDateRange();
         
-        // Generate initial videos (basic format)
-        await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_full');
-        await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_portrait');  // Portrait uses full 56 days
-        
-        // Upload videos to Cloudflare Stream and get video IDs
-        console.log('\n☁️ Uploading videos to Cloudflare Stream...');
-        let fullVideoId = null;
-        let portraitVideoId = null;
+        // Generate initial videos (basic format) with error handling
+        console.log('\n🎬 Generating videos...');
+        const videoResults = {
+            full: null,
+            social: null,
+            portrait: null
+        };
         
         try {
-            // Upload full video
-            const fullUploadCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
-                `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_STREAM_API_TOKEN ` +
-                `node cloudflare_tus_upload.js videos/heliosphere_full_${new Date().toISOString().split('T')[0]}.mov full`;
+            videoResults.full = await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_full');
+        } catch (err) {
+            console.error('Failed to generate full video:', err.message);
+        }
+        
+        try {
+            videoResults.social = await generateVideo(frames, CONFIG.SOCIAL_DAYS, 'heliosphere_social');
+        } catch (err) {
+            console.error('Failed to generate social video:', err.message);
+        }
+        
+        try {
+            videoResults.portrait = await generateVideo(frames, CONFIG.TOTAL_DAYS, 'heliosphere_portrait');
+        } catch (err) {
+            console.error('Failed to generate portrait video:', err.message);
+        }
+        
+        const successCount = Object.values(videoResults).filter(v => v !== null).length;
+        
+        // Automatically upload videos and update website
+        console.log('\n🌐 Starting automatic website update with video uploads...');
+        try {
+            // Run the automatic update script which handles:
+            // 1. Finding latest videos
+            // 2. Uploading to Cloudflare Stream
+            // 3. Updating website HTML with new video IDs
+            // 4. Deploying to Cloudflare Pages
+            const updateCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && node auto_update_website.js`;
             
-            const { stdout: fullStdout } = await execAsync(fullUploadCommand, { timeout: 600000 });
-            console.log(fullStdout);
+            const { stdout: updateStdout } = await execAsync(updateCommand, { 
+                timeout: 900000,  // 15 minutes timeout for full update process
+                maxBuffer: 10 * 1024 * 1024  // 10MB buffer for output
+            });
             
-            // Extract video ID from output
-            const fullIdMatch = fullStdout.match(/Video ID: ([a-f0-9]{32})/);
-            if (fullIdMatch) {
-                fullVideoId = fullIdMatch[1];
-                console.log(`✓ Full video uploaded: ${fullVideoId}`);
-            }
+            console.log(updateStdout);
             
-            // Upload portrait video
-            const portraitUploadCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
-                `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_STREAM_API_TOKEN ` +
-                `node cloudflare_tus_upload.js videos/heliosphere_portrait_${new Date().toISOString().split('T')[0]}.mov portrait`;
-            
-            const { stdout: portraitStdout } = await execAsync(portraitUploadCommand, { timeout: 600000 });
-            console.log(portraitStdout);
-            
-            // Extract video ID from output
-            const portraitIdMatch = portraitStdout.match(/Video ID: ([a-f0-9]{32})/);
-            if (portraitIdMatch) {
-                portraitVideoId = portraitIdMatch[1];
-                console.log(`✓ Portrait video uploaded: ${portraitVideoId}`);
-            }
-            
-            // Update website with new video IDs
-            if (fullVideoId && portraitVideoId) {
-                console.log('\n🌐 Updating website with new video IDs...');
-                const updateCommand = `cd /opt/heliosphere && export $(grep -v '^#' .env | xargs) && ` +
-                    `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN ` +  // Use main token for Pages
-                    `node update_website.js ${fullVideoId} ${portraitVideoId}`;
-                
-                const { stdout: updateStdout } = await execAsync(updateCommand, { timeout: 60000 });
-                console.log(updateStdout);
-                console.log('✓ Website updated and deployed!');
+            // Check if update was successful
+            if (updateStdout.includes('Update Complete!')) {
+                console.log('✅ Website successfully updated with latest videos!');
+                productionState.websiteUpdated = true;
+                productionState.lastWebsiteUpdate = new Date().toISOString();
             } else {
-                console.error('⚠️ Could not extract video IDs for website update');
+                console.error('⚠️ Website update may have had issues');
             }
             
         } catch (error) {
-            console.error('Failed to upload videos:', error.message);
+            console.error('❌ Failed to update website:', error.message);
             productionState.errors.push({
-                type: 'video_upload',
+                type: 'website_update',
                 message: error.message,
                 timestamp: new Date().toISOString()
             });
+            
+            // Try fallback: just deploy existing site without video updates
+            try {
+                console.log('🔄 Attempting to redeploy existing website...');
+                const deployCommand = `cd /opt/heliosphere/heliosphere-pages && export $(grep -v '^#' /opt/heliosphere/.env | xargs) && npx wrangler pages deploy . --project-name heliosphere --branch main`;
+                await execAsync(deployCommand, { 
+                    timeout: 60000
+                });
+                console.log('✓ Existing website redeployed');
+            } catch (fallbackError) {
+                console.error('❌ Fallback deployment also failed:', fallbackError.message);
+            }
         }
         
         // Clean up old frames
@@ -1187,5 +1270,25 @@ async function start() {
         }
     });
 }
+
+// Graceful shutdown handling
+async function gracefulShutdown(signal) {
+    console.log(`\n⚠️ Received ${signal}, shutting down gracefully...`);
+    
+    // Save current state if production is running
+    if (productionState.status === 'running') {
+        console.log('💾 Saving current state...');
+        await saveState();
+        await saveManifest();
+    }
+    
+    // Close server
+    console.log('🔌 Closing server...');
+    process.exit(0);
+}
+
+// Register signal handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 start().catch(console.error);
